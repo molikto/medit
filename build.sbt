@@ -15,7 +15,7 @@ lazy val `main` = project.in(file("src-main")).settings(
       module => {
         Seq(
           "org.lwjgl" % module % version,
-          "org.lwjgl" % module % version classifier "natives-windows" //Change to linux/mac
+          "org.lwjgl" % module % version classifier "natives-macos" //windows/linux/mac
         )
       }
     } ++ Seq(
