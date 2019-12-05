@@ -16,4 +16,5 @@ sealed trait DrawCall {
 }
 object DrawCall {
   case class Text(override val position: Position, style: TextStyle, text: Str) extends DrawCall
+  case class Translated(position: Position, calls: Seq[DrawCall]) extends DrawCall
 }

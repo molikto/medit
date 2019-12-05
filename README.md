@@ -31,6 +31,8 @@ what users need? (in order of implementation!)
         * navigation
         * selection
         * find replace
+        * diff merge
+        * copy paste
     * auto complete and tooltips
         * is this match exact?
         * is this the only match?
