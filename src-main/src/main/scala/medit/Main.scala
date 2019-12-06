@@ -108,7 +108,7 @@ class Window {
   glfwShowWindow(window)
   //glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
-  medit.draw.Impl.instance = new Impl()
+  medit.draw.impl = new Impl()
   paints = new Paints()
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)

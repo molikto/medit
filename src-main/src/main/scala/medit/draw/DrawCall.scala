@@ -8,7 +8,7 @@ object Typeface {
 }
 
 case class TextStyle(color: Int, typeface: Typeface, size: Int) {
-  def measure(text: String) = Impl.instance.measure(this, text)
+  def measure(text: String) = impl.measure(this, text)
 }
 
 sealed trait DrawCall {
