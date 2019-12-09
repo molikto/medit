@@ -57,7 +57,7 @@ what users need? (in order of implementation!)
  
 * IntelliJ MPS
     * this is a structural editor framework, not a language framework, MPS's semantics part is not suited for developing serious general purpose languages from scratch, this project aims to provide an alternative to language implementors an alternative to parser and language server.
-    * although it looks like a text editor, but the keyboard handling is not like a text editor at all
+    * for exmaple they seems to treat `reference` as a construct
 * Blockly
 * Lamdu
     * very good concepts

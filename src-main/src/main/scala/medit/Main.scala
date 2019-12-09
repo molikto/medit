@@ -8,7 +8,8 @@ import org.lwjgl.opengl._
 import org.lwjgl.system._
 import java.nio._
 
-import medit.draw.{DrawCall, Position, TextStyle, Typeface}
+import medit.draw.{DrawCall, Position, TextMeasure, TextStyle, Typeface}
+import medit.editor.Editor
 import org.lwjgl.glfw.Callbacks._
 import org.lwjgl.glfw.GLFW._
 import org.lwjgl.opengl.GL30._
@@ -28,6 +29,27 @@ object Main {
   }
 }
 
+object typefaces {
+  def font(a: String, index: Int): sk_typeface_t = sk_typeface_create_from_file(new File(new File("fonts"), a).getPath, index)
+  def apply(a: draw.Typeface): sk_typeface_t = a match {
+    case Typeface.Mono => Mono
+  }
+  val Mono = font("Menlo.ttc", 0)
+}
+
+
+class Impl() extends draw.Impl {
+  override def measure(textStyle: TextStyle, str: draw.Str): TextMeasure = {
+    TextMeasure(0, 0, 0)
+  }
+}
+
+
+class Paints() {
+  val text : sk_paint_t = sk_paint_new()
+  sk_paint_set_antialias(text, true)
+}
+
 class Window {
   private var window = 0L
 
@@ -37,6 +59,7 @@ class Window {
   var frameBufferSize: (Int, Int) = null
   def calculateDp(): Unit = {
     dp = 1f * frameBufferSize._1 / windowSize._1
+    println(s"dp is $dp")
   }
   var dp: Float = 1
 
@@ -61,6 +84,9 @@ class Window {
   glfwWindowHint(GLFW_DEPTH_BITS, 0)
   window = glfwCreateWindow(600, 600, "medit", NULL, NULL)
   if (window == NULL) throw new RuntimeException("Failed to create the GLFW window")
+  glfwSetCharModsCallback(window, (window: Long, codepoint: Int, mods: Int) => {
+    editor.onChar(codepoint, mods)
+  })
   glfwSetKeyCallback(window, (window: Long, key: Int, scancode: Int, action: Int, mods: Int) => {
   })
   // Get the thread stack and push a new frame
@@ -69,29 +95,31 @@ class Window {
     val pWidth = stack.mallocInt(1) // int*
     val pHeight = stack.mallocInt(1)
     glfwGetWindowSize(window, pWidth, pHeight)
-    debug(s"window size ${pWidth.get(0)}, ${pHeight.get(0)}")
+    windowSize = (pWidth.get(0), pHeight.get(0))
+    debug(s"window size $windowSize")
     val vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor)
     glfwSetWindowPos(window, (vidmode.width - pWidth.get(0)) / 2, (vidmode.height - pHeight.get(0)) / 2)
     glfwGetFramebufferSize(window, pWidth, pHeight)
-    debug(s"frame buffer size ${pWidth.get(0)}, ${pHeight.get(0)}")
     frameBufferSize = (pWidth.get(0), pHeight.get(0))
+    debug(s"frame buffer size $frameBufferSize")
     calculateDp()
   } finally {
     if (stack != null) stack.close()
   }
   glfwSetWindowSizeCallback(window, (window, width, height) => {
     windowSize = (width, height)
+    debug(s"window size changed $windowSize")
     calculateDp()
   })
   glfwSetFramebufferSizeCallback(window, (window, width, height) => {
-    debug(s"frame buffer size changed $width $height")
     frameBufferSize = (width, height)
+    debug(s"frame buffer size changed $frameBufferSize")
     calculateDp()
     glfwMakeContextCurrent(window)
     glViewport(0, 0, width, height)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     destroySurface()
-    createSkSurface()
+    createSurface()
     render()
   })
   // TODO resizing window will cause drawing to turn black
@@ -103,37 +131,12 @@ class Window {
   // GrContextOptions options;
   //options.fRequireDecodeDisableForSRGB = false; //was removed?
   gr_context = gr_context_make_gl(glinterface)
-  createSkSurface()
-  glfwSwapInterval(1)
-  glfwShowWindow(window)
-  //glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
-  glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
-  medit.draw.impl = new Impl()
-  paints = new Paints()
-  while (!glfwWindowShouldClose(window)) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    render()
-    gr_context_flush(gr_context)
-    glfwSwapBuffers(window)
-    glfwPollEvents()
-  }
-  destroySurface()
-  gr_context_release_resources_and_abandon_context(gr_context)
-  // Free the window callbacks and destroy the window
-  glfwFreeCallbacks(window)
-  glfwDestroyWindow(window)
-  // Terminate GLFW and free the error callback
-  glfwTerminate()
-  glfwSetErrorCallback(null).free()
-
-
   def destroySurface(): Unit = {
     sk_surface_unref(surface)
     gr_backendrendertarget_delete(gr_backend)
     gr_ffi.deallocate()
   }
-
-  def createSkSurface(): Unit = {
+  def createSurface(): Unit = {
     gr_ffi = new gr_gl_framebufferinfo_t()
     gr_ffi.fFBOID(0)
     gr_ffi.fFormat(GL_RGBA8)
@@ -152,38 +155,52 @@ class Window {
     )
     canvas = sk_surface_get_canvas(surface)
   }
-
-  object typefaces {
-    def font(a: String, index: Int): sk_typeface_t = sk_typeface_create_from_file(new File(new File("fonts"), a).getPath, index)
-    def apply(a: medit.draw.Typeface): sk_typeface_t = a match {
-      case Typeface.Mono => Mono
-    }
-    val Mono = font("Menlo.ttc", 0)
+  createSurface()
+  glfwSwapInterval(1)
+  glfwShowWindow(window)
+  //glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
+  glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
+  medit.draw.impl = new Impl()
+  paints = new Paints()
+  editor = new Editor(structure.Language.test)
+  while (!glfwWindowShouldClose(window)) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    render()
+    gr_context_flush(gr_context)
+    glfwSwapBuffers(window)
+    glfwPollEvents()
   }
+  destroySurface()
+  gr_context_release_resources_and_abandon_context(gr_context)
+  // Free the window callbacks and destroy the window
+  glfwFreeCallbacks(window)
+  glfwDestroyWindow(window)
+  // Terminate GLFW and free the error callback
+  glfwTerminate()
+  glfwSetErrorCallback(null).free()
 
-  class Impl() extends medit.draw.Impl {
-    override def measure(textStyle: TextStyle, str: String): Int = {
-      0
-    }
-  }
-
-
-  class Paints() {
-    val text : sk_paint_t = sk_paint_new()
-    sk_paint_set_antialias(text, true)
-  }
+  var editor: Editor = null
 
   var paints: Paints = null
 
-  private def draw(text: DrawCall.Text): Unit = {
-    val paint = paints.text
-    sk_paint_set_color(paint, text.style.color)
-    sk_paint_set_textsize(paint, text.style.size * dp)
-    sk_paint_set_typeface(paint, typefaces(text.style.typeface))
-    sk_canvas_draw_text(canvas, text.text, text.text.size, text.position.left * dp, text.position.top * dp, paint)
+  private def perform(c: DrawCall): Unit = {
+    c match {
+      case DrawCall.Text(position, style, text) =>
+        val paint = paints.text
+        sk_paint_set_color(paint, style.color)
+        sk_paint_set_textsize(paint, style.size * dp)
+        sk_paint_set_typeface(paint, typefaces(style.typeface))
+        sk_canvas_draw_text(canvas, text, text.size, position.left * dp, position.top * dp, paint)
+      case DrawCall.Translated(position, calls) =>
+        calls.foreach(perform)
+    }
   }
 
-  private def render() = {
+  def render(): Unit = {
+    perform(editor.render(windowSize._1))
+  }
+
+  def renderTest() = {
     val fill = sk_paint_new()
     sk_paint_set_color(fill, 0xFF0000FF)
     sk_canvas_draw_paint(canvas, fill)
@@ -212,7 +229,6 @@ class Window {
     rect2.right(520.0f)
     rect2.bottom(360.0f)
     sk_canvas_draw_oval(canvas, rect2, fill)
-    draw(DrawCall.Text(Position(100, 100, 0), TextStyle(0xFFFF0000, Typeface.Mono, 13), "sk_paint_set_color"))
     sk_path_delete(path)
     sk_paint_delete(stroke)
     sk_paint_delete(fill)

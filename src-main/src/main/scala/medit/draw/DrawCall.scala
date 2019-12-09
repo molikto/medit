@@ -8,12 +8,15 @@ object Typeface {
 }
 
 case class TextStyle(color: Int, typeface: Typeface, size: Int) {
-  def measure(text: String) = impl.measure(this, text)
+  def measure(text: Str) = impl.measure(this, text)
+}
+object TextStyle {
 }
 
 sealed trait DrawCall {
   val position: Position
 }
+
 object DrawCall {
   case class Text(override val position: Position, style: TextStyle, text: Str) extends DrawCall
   case class Translated(position: Position, calls: Seq[DrawCall]) extends DrawCall

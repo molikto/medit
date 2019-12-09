@@ -1,0 +1,42 @@
+
+
+
+record module(decs: seq(declaration))
+
+record implicit_name(impl: bool, ty: concrete)
+
+record name_type(names: seq(implicit_name), ty: concrete)
+
+sum declaration {
+  case define(
+    modifiers: bag(declaration_modifier),
+    name: name,
+    parameters: seq(name_type),
+    typ: option(concrete),
+    term: concrete)
+}
+
+sum number_const_type {
+  case nat
+  case int
+}
+
+sum concrete {
+  case axiom
+  case declare
+  case hole
+  case undefined
+  case type
+  case internal
+  case interval_zero
+  case interval_one
+  case number(str: str, typ: option(number_const_type))
+  case and(left: concrete, right: concrete)
+  case or(left: concrete, right: concrete)
+  case neg(left: concrete)
+  case make
+  case up(lvl: int, term: concrete)
+  case reference(str: str)
+  case cast(left: concrete, right: concrete)
+  case function(domain
+}
