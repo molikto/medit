@@ -45,8 +45,8 @@ object NameTypeTag {
   implicit val rw: RW[NameTypeTag] = macroRW
 }
 
-case class Case(name: String, fields: Seq[NameTypeTag], layout: Option[Layout] = None) {
-  def layoutOrDefault = layout.getOrElse(Layout.nameDefault(name, fields))
+case class Case(name: String, fields: Seq[NameTypeTag], template: Option[Template] = None) {
+  def templateOrDefault = template.getOrElse(Template.nameDefault(name, fields))
 }
 object Case {
   implicit val rw: RW[Case] = macroRW
@@ -68,18 +68,22 @@ sealed trait Type {
   }
 }
 
-sealed trait Layout {
+sealed trait Template {
 }
-object Layout {
-  case class Keyword(name: String) extends Layout
-  case class TightBrackets(left: Layout, b1: String, content: Layout, b2: String) extends Layout
-  case class Repsep(layouts: Seq[Layout], sep: String) extends Layout
-  case class Child(i: Int) extends Layout
-  def nameDefault(name: String, fields: Seq[NameTypeTag]): Layout = {
+object Template {
+  case class Keyword(name: String) extends Template
+  case class Collection(b1: String, sep: String, b2: String) extends Template
+  case class TightBrackets(left: Template, b1: String, content: Seq[Template], sep: String, b2: String) extends Template
+  case class Field(i: Int) extends Template
+
+  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Collection], macroRW[TightBrackets], macroRW[Field])
+
+  def nameDefault(name: String, fields: Seq[NameTypeTag]): Template = {
     TightBrackets(
       Keyword(name),
       "(",
-      Repsep(fields.indices.map(f => Layout.Child(f)), ","),
+      fields.indices.map(f => Template.Field(f)),
+      ",",
       ")"
     )
   }
@@ -87,8 +91,8 @@ object Layout {
 
 object Type {
   @upickle.implicits.key("record")
-  case class Record(name: String, fields: Seq[NameTypeTag], layout: Option[Layout] = None) extends Type {
-    def layoutOrDefault = layout.getOrElse(Layout.nameDefault(name, fields))
+  case class Record(name: String, fields: Seq[NameTypeTag], template: Option[Template] = None) extends Type {
+    def templateOrDefault = template.getOrElse(Template.nameDefault(name, fields))
   }
   @upickle.implicits.key("sum")
   case class Sum(name: String, cases: Seq[Case]) extends Type

@@ -2,7 +2,7 @@ package medit.editor
 
 import medit.draw
 import medit.draw.{DrawCall, Position, Rect, TextStyle}
-import medit.structure.{Data, Language, Type, TypeTag}
+import medit.structure.{Data, Language, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
@@ -36,7 +36,13 @@ sealed trait Node {
   protected var height: Int = 0
 
   def rect: Rect = Rect(top, left, width, height)
-  def drawTree(left: Int, top: Int, width: Int): draw.DrawCall
+
+
+  def draw(width: Int): DrawCall = {
+    layout(width)
+    ???
+  }
+  def layout(width: Int): Unit = ???
 }
 
 object Node {
@@ -88,7 +94,7 @@ object Node {
     override def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else _childs(focus.head)(focus.tail)
     override def childs: Seq[Node] = _childs.toSeq
 
-    def replace(choice: Node, s: Node) = {
+    private[Node] def replace(choice: Node, s: Node) = {
       assert(choice.parent == this && s.parent == null)
       val index = childs.indexOf(choice)
       assert(index >= 0)
@@ -96,20 +102,7 @@ object Node {
       s._parent = this
     }
 
-    def drawTree(left: Int, top: Int, width: Int, tag: String, style: TextStyle): draw.DrawCall = {
-      this.left = left
-      this.top = top
-      val measure = style.measure(tag)
-      val (cs, ht) = childs.foldLeft((Seq.empty[DrawCall], top + measure.y)) { (acc, n) =>
-        val c = n.drawTree(left + 8, acc._2, width)
-        (acc._1 :+ c, n.top + n.height)
-      }
-      this.height = ht - top
-      DrawCall.Group(Seq(
-        DrawCall.Text(Position(top + measure.y, left, 0), style, tag),
-        DrawCall.Group(cs)
-      ))
-    }
+    protected def template: Template
   }
 
   class Structure(
@@ -118,14 +111,11 @@ object Node {
     def typ = language.types(tag.index)
     def childTypes = typ(index)
 
-    override def drawTree(left: Int, top: Int, width: Int): draw.DrawCall = {
-      val tag = typ match {
-        case record: Type.Record =>
-          record.name
-        case sum: Type.Sum =>
-          sum.cases(index).name
-      }
-      drawTree(left, top, width, tag, TextStyle.keyword)
+    override val template: Template = typ match {
+      case record: Type.Record =>
+        record.templateOrDefault
+      case sum: Type.Sum =>
+        sum.cases(index).templateOrDefault
     }
   }
 
@@ -138,9 +128,7 @@ object Node {
       _childs.size - 1
     }
 
-    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
-      drawTree(left, top, width, "[", TextStyle.delimiters)
-    }
+    override val template: Template = Template.Collection("[",  ",", "]")
   }
 
   sealed trait Leaf extends Node {
@@ -169,14 +157,6 @@ object Node {
       }
     }
 
-    def drawTree(left: Int, top: Int, width: Int, style: TextStyle): DrawCall = {
-      this.left = left
-      this.top = top
-      val tag = if (buffer.isEmpty) "?" else buffer
-      val measure = style.measure(tag)
-      this.height = measure.y
-      DrawCall.Text(Position(top + measure.y, left, 0), style, tag)
-    }
   }
 
   class Choice(
@@ -199,10 +179,6 @@ object Node {
           true
       }
     }
-
-    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
-      drawTree(left, top, width, TextStyle.error)
-    }
   }
 
   class Str(
@@ -214,9 +190,5 @@ object Node {
     }
 
     override def tryCommit(buffer: String): Boolean = false
-
-    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
-      drawTree(left, top, width, TextStyle.reference)
-    }
   }
 }
