@@ -169,7 +169,8 @@ class Window {
   medit.draw.impl = new Impl()
   paints = new Paints()
   shapes = new Shapes()
-  editor = new Editor(structure.MetaLanguage.language)
+  val lang = structure.MetaLanguage
+  editor = new Editor(lang.language, lang.json)
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     render()

@@ -99,6 +99,29 @@
       ]
     },
     {
+      "$type": "record",
+      "name": "language",
+      "fields": [
+        {
+          "name": "types",
+          "tag": {
+            "$type": "arr",
+            "item": {
+              "$type": "ref",
+              "name": "type"
+            }
+          }
+        },
+        {
+          "name": "root",
+          "tag": {
+            "$type": "ref",
+            "name": "typed_tag"
+          }
+        }
+      ]
+    },
+    {
       "$type": "sum",
       "name": "type",
       "cases": [
@@ -148,10 +171,7 @@
     }
   ],
   "root": {
-    "$type": "arr",
-    "item": {
-      "$type": "ref",
-      "name": "type"
-    }
+    "$type": "ref",
+    "name": "language"
   }
 }

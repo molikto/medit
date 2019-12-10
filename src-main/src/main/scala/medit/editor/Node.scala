@@ -3,7 +3,7 @@ package medit.editor
 import medit.draw
 import medit.draw.{DrawCall, Position, Rect, TextStyle}
 import medit.layout.Layout
-import medit.structure.{Language, Type, TypeTag}
+import medit.structure.{Data, Language, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
@@ -41,6 +41,27 @@ sealed trait Node {
 }
 
 object Node {
+  def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = a match {
+    case TypeTag.Str => new Str(parent).init(data.str)
+    case coll: TypeTag.Coll =>
+      val col = new Collection(parent, language, coll)
+      col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
+      col
+    case n: TypeTag.Ref => language.types(n.index) match {
+      case Type.Record(name, fields) =>
+        val s = new Structure(parent, language, n, -1)
+        val obj = data.obj
+        s.init(fields.map(f => create(s, language, f.tag, obj(f.name))))
+        s
+      case sum: Type.Sum =>
+        val obj = data.obj
+        val typ = obj("$type").str
+        val id = sum.cases.indexWhere(_.name == typ)
+        val s = new Structure(parent, language, n, id)
+        s.init(sum.cases(id).fields.map(f => create(s, language, f.tag, obj(f.name))))
+        s
+    }
+  }
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
     case TypeTag.Str => new Str(parent)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
@@ -60,7 +81,11 @@ object Node {
 
   sealed trait HaveChilds extends Node {
     protected val _childs = new mutable.ArrayBuffer[Node]()
-    def init(childs: Seq[Node]): Unit = _childs.appendAll(childs)
+
+    def init(childs: Seq[Node]): Node= {
+      _childs.appendAll(childs)
+      this
+    }
     override def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else _childs(focus.head)(focus.tail)
     override def childs: Seq[Node] = _childs.toSeq
 
@@ -184,6 +209,11 @@ object Node {
   class Str(
       override protected var _parent: Node
   ) extends StringBuffered with Leaf {
+    def init(str: String): Node = {
+      buffer = str
+      this
+    }
+
     override def tryCommit(buffer: String): Boolean = false
 
     override def drawTree(left: Int, top: Int, width: Int): DrawCall = {

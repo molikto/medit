@@ -1,16 +1,16 @@
 package medit.editor
 
 import medit.draw._
-import medit.structure.Language
+import medit.structure.{Data, Language}
 import medit.input._
 import medit.utils.nullable
 
 import scala.collection.mutable.ArrayBuffer
 
-class Editor(language: Language) extends Mover {
+class Editor(language: Language, data: ujson.Value) extends Mover {
 
   // states
-  protected val root = Node.root(language)
+  protected val root = Node.create(null, language, language.root, data)
   protected var focus: Seq[Int] = Seq.empty
   @nullable var editMode: Node = null
 

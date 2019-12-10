@@ -4,6 +4,8 @@ import java.io.File
 
 object MetaLanguage {
 
-  val language = Language.parse(scala.io.Source.fromFile("language-meta.json").getLines().mkString("\n"))
+  val src = scala.io.Source.fromFile("language-meta.json").getLines().mkString("\n")
+  val json = ujson.read(src)
+  val language = Language.parse(src)
 
 }
