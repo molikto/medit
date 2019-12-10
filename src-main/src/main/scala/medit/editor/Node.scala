@@ -44,7 +44,7 @@ object Node {
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
     case TypeTag.Str => new Str(parent)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
-    case n: TypeTag.Named => language.types(n.index) match {
+    case n: TypeTag.Ref => language.types(n.index) match {
       case Type.Record(name, fields) =>
         val s = new Structure(parent, language, n, -1)
         s.init(fields.map(f => default(s, language, f.tag)))
@@ -72,10 +72,9 @@ object Node {
       s._parent = this
     }
 
-    def drawTree(left: Int, top: Int, width: Int, tag: String): draw.DrawCall = {
+    def drawTree(left: Int, top: Int, width: Int, tag: String, style: TextStyle): draw.DrawCall = {
       this.left = left
       this.top = top
-      val style = TextStyle.default
       val measure = style.measure(tag)
       val (cs, ht) = childs.foldLeft((Seq.empty[DrawCall], top + measure.y)) { (acc, n) =>
         val c = n.drawTree(left + 8, acc._2, width)
@@ -90,8 +89,8 @@ object Node {
   }
 
   class Structure(
-      override protected var _parent: Node,
-      val language: Language, val tag: TypeTag.Named, val index: Int) extends HaveChilds {
+                   override protected var _parent: Node,
+                   val language: Language, val tag: TypeTag.Ref, val index: Int) extends HaveChilds {
     def typ = language.types(tag.index)
     def childTypes = typ(index)
 
@@ -102,7 +101,7 @@ object Node {
         case Type.Sum(name, cases) =>
           name + "." + cases(index).name
       }
-      drawTree(left, top, width, tag)
+      drawTree(left, top, width, tag, TextStyle.keyword)
     }
   }
 
@@ -111,12 +110,12 @@ object Node {
       val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
     override def tryNewChild(): Int = {
       // TODO check collection type and size limit
-      _childs.append(default(this, language, sort.tt))
+      _childs.append(default(this, language, sort.item))
       _childs.size - 1
     }
 
     override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
-      drawTree(left, top, width, "[")
+      drawTree(left, top, width, "[", TextStyle.delimiters)
     }
   }
 
@@ -135,7 +134,7 @@ object Node {
     }
 
     override def editBackspace(): Unit = {
-      if (buffer.nonEmpty) buffer = buffer.drop(1)
+      if (buffer.nonEmpty) buffer = buffer.dropRight(1)
     }
 
     def tryCommit(buffer: String): Boolean
@@ -146,11 +145,10 @@ object Node {
       }
     }
 
-    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
+    def drawTree(left: Int, top: Int, width: Int, style: TextStyle): DrawCall = {
       this.left = left
       this.top = top
       val tag = if (buffer.isEmpty) "?" else buffer
-      val style = TextStyle.default
       val measure = style.measure(tag)
       this.height = measure.y
       DrawCall.Text(Position(top + measure.y, left, 0), style, tag)
@@ -159,7 +157,7 @@ object Node {
 
   class Choice(
       override protected var _parent: Node,
-      val language: Language, val tag: TypeTag.Named
+      val language: Language, val tag: TypeTag.Ref
   ) extends StringBuffered with Leaf {
     def typ = language.types(tag.index).asInstanceOf[Type.Sum]
 
@@ -178,11 +176,18 @@ object Node {
       }
     }
 
+    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
+      drawTree(left, top, width, TextStyle.error)
+    }
   }
 
   class Str(
       override protected var _parent: Node
   ) extends StringBuffered with Leaf {
     override def tryCommit(buffer: String): Boolean = false
+
+    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
+      drawTree(left, top, width, TextStyle.reference)
+    }
   }
 }

@@ -93,6 +93,7 @@ class Window {
     editor.onChar(codepoint, mods)
   })
   glfwSetKeyCallback(window, (window: Long, key: Int, scancode: Int, action: Int, mods: Int) => {
+    editor.onKey(key, mods)
   })
   // Get the thread stack and push a new frame
   val stack = stackPush
@@ -207,7 +208,7 @@ class Window {
         r.left(rect.left * dp)
         r.top(rect.top * dp)
         r.bottom((rect.top + rect.height) * dp)
-        r.right((rect.left + 20) * dp)
+        r.right((rect.left + rect.width) * dp)
         sk_canvas_draw_rect(canvas, r, paint)
       case DrawCall.Translated(position, calls) =>
         sk_canvas_save(canvas)

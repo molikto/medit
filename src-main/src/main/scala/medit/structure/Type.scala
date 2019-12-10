@@ -1,6 +1,7 @@
 package medit.structure
 
-import medit.layout.Token
+import upickle.default.{ReadWriter => RW, macroRW}
+
 
 sealed trait TypeTag {
   def resolve(types: Seq[Type]): Unit = this match {
@@ -8,33 +9,46 @@ sealed trait TypeTag {
     case TypeTag.Opt(tt) => tt.resolve(types)
     case TypeTag.Arr(tt) => tt.resolve(types)
     case TypeTag.Bag(tt) => tt.resolve(types)
-    case n@TypeTag.Named(name) => n.index = types.indexWhere(_.name == name)
+    case n@TypeTag.Ref(name) => n.index = types.indexWhere(_.name == name)
   }
 }
 
 object TypeTag {
+  @upickle.implicits.key("str")
   case object Str extends TypeTag
   sealed trait Coll extends TypeTag {
-    def tt: TypeTag
+    def item: TypeTag
     def sizeLimit: Int
   }
-  case class Opt(tt: TypeTag) extends Coll {
+  @upickle.implicits.key("opt")
+  case class Opt(item: TypeTag) extends Coll {
     override def sizeLimit: Int = 1
   }
-  case class Arr(tt: TypeTag) extends Coll {
+  @upickle.implicits.key("arr")
+  case class Arr(item: TypeTag) extends Coll {
     override def sizeLimit: Int = Int.MaxValue
   }
-  case class Bag(tt: TypeTag) extends Coll {
+  @upickle.implicits.key("bag")
+  case class Bag(item: TypeTag) extends Coll {
     override def sizeLimit: Int = Int.MaxValue
   }
-  case class Named(name: String) extends TypeTag {
+  @upickle.implicits.key("ref")
+  case class Ref(name: String) extends TypeTag {
     var index = -1
   }
+
+  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str.type], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
 }
 
 case class NameTypeTag(name: String, tag: TypeTag)
+object NameTypeTag {
+  implicit val rw: RW[NameTypeTag] = macroRW
+}
 
 case class Case(name: String, fields: Seq[NameTypeTag])
+object Case {
+  implicit val rw: RW[Case] = macroRW
+}
 
 sealed trait Type {
   def apply(index: Int) = this match {
@@ -53,8 +67,12 @@ sealed trait Type {
 }
 
 object Type {
+  @upickle.implicits.key("record")
   case class Record(name: String, fields: Seq[NameTypeTag]) extends Type
+  @upickle.implicits.key("sum")
   case class Sum(name: String, cases: Seq[Case]) extends Type
+
+  implicit val rw: RW[Type] = RW.merge(macroRW[Record], macroRW[Sum])
 }
 
 case class Language(
@@ -63,6 +81,20 @@ case class Language(
 ) {
   types.foreach(_.resolve(types))
   root.resolve(types)
+}
+
+object Language {
+  implicit val rw: RW[Language] = macroRW
+
+  def parse(str: String): Language = {
+    import upickle.default._
+    read[Language](str)
+  }
+
+  def serialize(language: Language): String = {
+    import upickle.default._
+    write(language)
+  }
 }
 
 

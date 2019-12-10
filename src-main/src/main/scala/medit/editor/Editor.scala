@@ -7,17 +7,17 @@ import medit.utils.nullable
 
 import scala.collection.mutable.ArrayBuffer
 
-class Editor(language: Language) {
+class Editor(language: Language) extends Mover {
 
   // states
-  val root = Node.root(language)
-  var focus: Seq[Int] = Seq.empty
+  protected val root = Node.root(language)
+  protected var focus: Seq[Int] = Seq.empty
   @nullable var editMode: Node = null
 
   def render(width: Int): DrawCall = {
     val cs = root.drawTree(0, 0, width)
-    val rect = root(focus).rect
-    DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.default), cs))
+    var rect = root(focus).rect.copy(width = if (editMode != null) 1 else 10)
+    DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.cursor), cs))
   }
 
   def onChar(codepoint: Codepoint, mods: Mods): Unit = if (editMode == null) {
@@ -46,6 +46,10 @@ class Editor(language: Language) {
         if (node.tryEdit()) {
           editMode = node
         }
+      case 'j' =>
+        visualDown(focus).foreach(focus = _)
+      case 'k' =>
+        visualUp(focus).foreach(focus = _)
       case 'a' =>
         val index = root(focus).tryNewChild()
         if (index >= 0) {

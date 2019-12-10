@@ -8,10 +8,13 @@ lazy val `main` = crossProject(JSPlatform, JVMPlatform)
     .crossType(CrossType.Pure)
     .in(file("src-main")).settings(
   sharedSettings,
+  libraryDependencies ++= Seq(
+  )
 ).jvmSettings(
   libraryDependencies ++= Seq(
+    "com.lihaoyi" %%% "upickle" % "0.8.0",
     "org.scala-lang.modules" %%% "scala-parser-combinators" % "1.1.2"
-  ),
+  )
 )
 
 lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
@@ -63,4 +66,3 @@ val sharedSettings = Seq(
   //  addCompilerPlugin("com.lihaoyi" %% "acyclic" %  "0.2.0"),
   //  libraryDependencies += "com.lihaoyi" %% "acyclic" % "0.2.0" % "provided",
 )
-

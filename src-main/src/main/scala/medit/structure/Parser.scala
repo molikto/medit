@@ -10,12 +10,6 @@ import scala.util.parsing.combinator.lexical.StdLexical
 
 
 
-
-/**
- *
- * VERY ULGY PARSER for now
- */
-// TODO local match and local tree split syntax. give a more uniform syntax for lambda and patterns.
 object Parser extends StandardTokenParsers with PackratParsers with ImplicitConversions {
 
   lexical.reserved.clear()
@@ -32,7 +26,7 @@ object Parser extends StandardTokenParsers with PackratParsers with ImplicitConv
      (keyword("opt") ~> delimited("(", tag ,")") ^^ {a => TypeTag.Opt(a)}) |
         (keyword("arr") ~> delimited("(", tag ,")") ^^ {a => TypeTag.Arr(a)}) |
         (keyword("bag") ~> delimited("(", tag ,")") ^^ {a => TypeTag.Bag(a)}) |
-  ident ^^ {a => TypeTag.Named(a)}
+  ident ^^ {a => TypeTag.Ref(a)}
 
 
   lazy val nameTag: Parser[NameTypeTag] = (ident <~ ":") ~ tag ^^ {a =>

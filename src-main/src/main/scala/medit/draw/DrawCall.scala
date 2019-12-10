@@ -15,14 +15,18 @@ case class TextStyle(color: Int, typeface: Typeface, size: Int) {
 
 
 object TextStyle {
-  val default = TextStyle(0xFFFFFFFF, Typeface.Mono, 12)
+  val keyword = TextStyle(0xFFFFFFAA, Typeface.Mono, 13)
+  val reference = TextStyle(0xFFFFFFFF, Typeface.Mono, 13)
+  val delimiters = TextStyle(0xFFAAAAAA, Typeface.Mono, 13)
+  val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)
 }
 
 
 case class ShapeStyle(color: Int)
 
 object ShapeStyle {
-  def default: ShapeStyle = ShapeStyle(0xFFAA0000)
+  val cursor : ShapeStyle = ShapeStyle(0xFF00AA00)
+  val error: ShapeStyle = ShapeStyle(0xFFAA0000)
 }
 
 sealed trait DrawCall

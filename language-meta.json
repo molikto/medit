@@ -1,0 +1,157 @@
+{
+  "types": [
+    {
+      "$type": "sum",
+      "name": "typed_tag",
+      "cases": [
+        {
+          "name": "str",
+          "fields": []
+        },
+        {
+          "name": "opt",
+          "fields": [
+            {
+              "name": "item",
+              "tag": {
+                "$type": "ref",
+                "name": "typed_tag"
+              }
+            }
+          ]
+        },
+        {
+          "name": "arr",
+          "fields": [
+            {
+              "name": "item",
+              "tag": {
+                "$type": "ref",
+                "name": "typed_tag"
+              }
+            }
+          ]
+        },
+        {
+          "name": "bag",
+          "fields": [
+            {
+              "name": "item",
+              "tag": {
+                "$type": "ref",
+                "name": "typed_tag"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ref",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "$type": "record",
+      "name": "name_typed_tag",
+      "fields": [
+        {
+          "name": "name",
+          "tag": {
+            "$type": "str"
+          }
+        },
+        {
+          "name": "tag",
+          "tag": {
+            "$type": "ref",
+            "name": "typed_tag"
+          }
+        }
+      ]
+    },
+    {
+      "$type": "record",
+      "name": "case",
+      "fields": [
+        {
+          "name": "name",
+          "tag": {
+            "$type": "str"
+          }
+        },
+        {
+          "name": "fields",
+          "tag": {
+            "$type": "arr",
+            "item": {
+              "$type": "ref",
+              "name": "name_typed_tag"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "$type": "sum",
+      "name": "type",
+      "cases": [
+        {
+          "name": "record",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            },
+            {
+              "name": "fields",
+              "tag": {
+                "$type": "arr",
+                "item": {
+                  "$type": "ref",
+                  "name": "name_typed_tag"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "sum",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            },
+            {
+              "name": "cases",
+              "tag": {
+                "$type": "arr",
+                "item": {
+                  "$type": "ref",
+                  "name": "case"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "root": {
+    "$type": "arr",
+    "item": {
+      "$type": "ref",
+      "name": "type"
+    }
+  }
+}
