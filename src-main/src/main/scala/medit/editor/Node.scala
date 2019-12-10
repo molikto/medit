@@ -1,7 +1,7 @@
 package medit.editor
 
 import medit.draw
-import medit.draw.{DrawCall, Position, TextStyle}
+import medit.draw.{DrawCall, Position, Rect, TextStyle}
 import medit.layout.Layout
 import medit.structure.{Language, Type, TypeTag}
 
@@ -10,6 +10,8 @@ import medit.utils._
 
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
+
+
   //
 //  private var _parent: Node = null // root node has empty parent
 //  private var _layout: Layout = null
@@ -25,13 +27,17 @@ sealed trait Node {
   def tryNewChild(): Int = -1
   def tryEdit(): Boolean = false
   def editAppend(c: Int): Unit = logicError()
+  def editBackspace(): Unit = logicError()
   def editCommit(): Unit = logicError()
 
+  // all in parent coordinate
   protected var top: Int = 0
   protected var left: Int = 0
-  protected var bottom: Int = 0
-  protected var right: Int = 0
-  def drawTree(width: Int): draw.DrawCall
+  protected var width: Int = 0
+  protected var height: Int = 0
+
+  def rect: Rect = Rect(top, left, width, height)
+  def drawTree(left: Int, top: Int, width: Int): draw.DrawCall
 }
 
 object Node {
@@ -65,6 +71,22 @@ object Node {
       _childs.update(index, s)
       s._parent = this
     }
+
+    def drawTree(left: Int, top: Int, width: Int, tag: String): draw.DrawCall = {
+      this.left = left
+      this.top = top
+      val style = TextStyle.default
+      val measure = style.measure(tag)
+      val (cs, ht) = childs.foldLeft((Seq.empty[DrawCall], top + measure.y)) { (acc, n) =>
+        val c = n.drawTree(left + 8, acc._2, width)
+        (acc._1 :+ c, n.top + n.height)
+      }
+      this.height = ht - top
+      DrawCall.Group(Seq(
+        DrawCall.Text(Position(top + measure.y, left, 0), style, tag),
+        DrawCall.Group(cs)
+      ))
+    }
   }
 
   class Structure(
@@ -73,22 +95,14 @@ object Node {
     def typ = language.types(tag.index)
     def childTypes = typ(index)
 
-    override def drawTree(width: Int): DrawCall = {
+    override def drawTree(left: Int, top: Int, width: Int): draw.DrawCall = {
       val tag = typ match {
         case Type.Record(name, fields) =>
           name
         case Type.Sum(name, cases) =>
           name + "." + cases(index).name
       }
-      val style = TextStyle.default
-      val measure = style.measure(tag)
-      DrawCall.Translated(Position(0, 0, 0), Seq(
-        DrawCall.Text(Position(measure.y, 0, 0), style, tag),
-        DrawCall.Translated(
-          Position(measure.y, 8, 0),
-          childs.map(_.drawTree(width))
-        )
-      ))
+      drawTree(left, top, width, tag)
     }
   }
 
@@ -101,15 +115,8 @@ object Node {
       _childs.size - 1
     }
 
-    override def drawTree(width: Int): DrawCall = {
-      val style = TextStyle.default
-      DrawCall.Translated(Position(0, 0, 0), Seq(
-        DrawCall.Text(Position(style.size, 0, 0), style, "["),
-        DrawCall.Translated(
-          Position(style.size, 8, 0),
-          childs.map(_.drawTree(width))
-        )
-      ))
+    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
+      drawTree(left, top, width, "[")
     }
   }
 
@@ -127,6 +134,10 @@ object Node {
       buffer = buffer + c.toChar.toString
     }
 
+    override def editBackspace(): Unit = {
+      if (buffer.nonEmpty) buffer = buffer.drop(1)
+    }
+
     def tryCommit(buffer: String): Boolean
 
     override def editCommit(): Unit = {
@@ -135,11 +146,14 @@ object Node {
       }
     }
 
-    override def drawTree(width: Int): DrawCall = {
+    override def drawTree(left: Int, top: Int, width: Int): DrawCall = {
+      this.left = left
+      this.top = top
+      val tag = if (buffer.isEmpty) "?" else buffer
       val style = TextStyle.default
-      val text = if (buffer.isEmpty) "?" else buffer
-      val measure = style.measure(text)
-      DrawCall.Text(Position(measure.y, 0, 0), style, text)
+      val measure = style.measure(tag)
+      this.height = measure.y
+      DrawCall.Text(Position(top + measure.y, left, 0), style, tag)
     }
   }
 
@@ -169,6 +183,6 @@ object Node {
   class Str(
       override protected var _parent: Node
   ) extends StringBuffered with Leaf {
-    override def tryCommit(buffer: String): Boolean = true
+    override def tryCommit(buffer: String): Boolean = false
   }
 }

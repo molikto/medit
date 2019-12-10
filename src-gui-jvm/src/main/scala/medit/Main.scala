@@ -48,6 +48,11 @@ class Impl() extends draw.Impl {
 class Paints() {
   val text : sk_paint_t = sk_paint_new()
   sk_paint_set_antialias(text, true)
+  val shape: sk_paint_t = sk_paint_new()
+}
+
+class Shapes {
+  val rect: sk_rect_t = new sk_rect_t()
 }
 
 class Window {
@@ -162,6 +167,7 @@ class Window {
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
   medit.draw.impl = new Impl()
   paints = new Paints()
+  shapes = new Shapes()
   editor = new Editor(structure.MetaLanguage.language)
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -183,6 +189,8 @@ class Window {
 
   var paints: Paints = null
 
+  var shapes: Shapes = null
+
   private def perform(c: DrawCall): Unit = {
     c match {
       case DrawCall.Text(position, style, text) =>
@@ -191,12 +199,23 @@ class Window {
         sk_paint_set_textsize(paint, style.size * dp)
         sk_paint_set_typeface(paint, typefaces(style.typeface))
         sk_canvas_draw_text(canvas, text, text.size, position.left * dp, position.top * dp, paint)
+      case DrawCall.Rect(rect, style) =>
+        val paint = paints.shape
+        sk_paint_set_stroke_width(paint, 1 * dp)
+        sk_paint_set_color(paint, style.color)
+        val r = shapes.rect
+        r.left(rect.left * dp)
+        r.top(rect.top * dp)
+        r.bottom((rect.top + rect.height) * dp)
+        r.right((rect.left + 20) * dp)
+        sk_canvas_draw_rect(canvas, r, paint)
       case DrawCall.Translated(position, calls) =>
         sk_canvas_save(canvas)
         sk_canvas_translate(canvas, position.left, position.top)
         calls.foreach(perform)
         sk_canvas_restore(canvas)
-
+      case DrawCall.Group(calls) =>
+        calls.foreach(perform)
     }
   }
 

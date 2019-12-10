@@ -15,7 +15,9 @@ class Editor(language: Language) {
   @nullable var editMode: Node = null
 
   def render(width: Int): DrawCall = {
-    root.drawTree(width)
+    val cs = root.drawTree(0, 0, width)
+    val rect = root(focus).rect
+    DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.default), cs))
   }
 
   def onChar(codepoint: Codepoint, mods: Mods): Unit = if (editMode == null) {
@@ -61,5 +63,12 @@ class Editor(language: Language) {
   }
 
   def onKey(key: Int, mods: Mods): Unit = {
+    if (editMode != null) {
+      if (key == Key.Backspace) {
+        editMode.editBackspace()
+      }
+    } else {
+
+    }
   }
 }
