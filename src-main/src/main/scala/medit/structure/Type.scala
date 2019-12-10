@@ -1,6 +1,6 @@
 package medit.structure
 
-import upickle.default.{ReadWriter => RW, macroRW}
+import upickle.default.{macroRW, ReadWriter => RW}
 
 
 sealed trait TypeTag {
@@ -45,30 +45,51 @@ object NameTypeTag {
   implicit val rw: RW[NameTypeTag] = macroRW
 }
 
-case class Case(name: String, fields: Seq[NameTypeTag])
+case class Case(name: String, fields: Seq[NameTypeTag], layout: Option[Layout] = None) {
+  def layoutOrDefault = layout.getOrElse(Layout.nameDefault(name, fields))
+}
 object Case {
   implicit val rw: RW[Case] = macroRW
 }
 
 sealed trait Type {
   def apply(index: Int) = this match {
-    case Type.Record(name, fields) =>
+    case record: Type.Record =>
       assert(index == -1)
-      fields
-    case Type.Sum(name, cases) =>
-      cases(index).fields
+      record.fields
+    case sum: Type.Sum =>
+      sum.cases(index).fields
   }
 
   def name: String
   def resolve(types: Seq[Type]) = this match {
-    case Type.Record(_, fields) => fields.foreach(_.tag.resolve(types))
-    case Type.Sum(_, cases) => cases.foreach(_.fields.foreach(_.tag.resolve(types)))
+    case record: Type.Record => record.fields.foreach(_.tag.resolve(types))
+    case sum: Type.Sum => sum.cases.foreach(_.fields.foreach(_.tag.resolve(types)))
+  }
+}
+
+sealed trait Layout {
+}
+object Layout {
+  case class Keyword(name: String) extends Layout
+  case class TightBrackets(left: Layout, b1: String, content: Layout, b2: String) extends Layout
+  case class Repsep(layouts: Seq[Layout], sep: String) extends Layout
+  case class Child(i: Int) extends Layout
+  def nameDefault(name: String, fields: Seq[NameTypeTag]): Layout = {
+    TightBrackets(
+      Keyword(name),
+      "(",
+      Repsep(fields.indices.map(f => Layout.Child(f)), ","),
+      ")"
+    )
   }
 }
 
 object Type {
   @upickle.implicits.key("record")
-  case class Record(name: String, fields: Seq[NameTypeTag]) extends Type
+  case class Record(name: String, fields: Seq[NameTypeTag], layout: Option[Layout] = None) extends Type {
+    def layoutOrDefault = layout.getOrElse(Layout.nameDefault(name, fields))
+  }
   @upickle.implicits.key("sum")
   case class Sum(name: String, cases: Seq[Case]) extends Type
 

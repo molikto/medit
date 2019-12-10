@@ -2,7 +2,6 @@ package medit.editor
 
 import medit.draw
 import medit.draw.{DrawCall, Position, Rect, TextStyle}
-import medit.layout.Layout
 import medit.structure.{Data, Language, Type, TypeTag}
 
 import scala.collection.mutable
@@ -48,10 +47,10 @@ object Node {
       col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
       col
     case n: TypeTag.Ref => language.types(n.index) match {
-      case Type.Record(name, fields) =>
+      case record: Type.Record =>
         val s = new Structure(parent, language, n, -1)
         val obj = data.obj
-        s.init(fields.map(f => create(s, language, f.tag, obj(f.name))))
+        s.init(record.fields.map(f => create(s, language, f.tag, obj(f.name))))
         s
       case sum: Type.Sum =>
         val obj = data.obj
@@ -66,11 +65,11 @@ object Node {
     case TypeTag.Str => new Str(parent)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
     case n: TypeTag.Ref => language.types(n.index) match {
-      case Type.Record(name, fields) =>
+      case record: Type.Record =>
         val s = new Structure(parent, language, n, -1)
-        s.init(fields.map(f => default(s, language, f.tag)))
+        s.init(record.fields.map(f => default(s, language, f.tag)))
         s
-      case s: Type.Sum =>
+      case sum: Type.Sum =>
         new Choice(parent, language, n)
     }
   }
@@ -121,10 +120,10 @@ object Node {
 
     override def drawTree(left: Int, top: Int, width: Int): draw.DrawCall = {
       val tag = typ match {
-        case Type.Record(name, fields) =>
-          name
-        case Type.Sum(name, cases) =>
-          name + "." + cases(index).name
+        case record: Type.Record =>
+          record.name
+        case sum: Type.Sum =>
+          sum.cases(index).name
       }
       drawTree(left, top, width, tag, TextStyle.keyword)
     }
