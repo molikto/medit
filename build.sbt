@@ -1,8 +1,20 @@
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+
 name := "medit"
 
 version := "0.1"
 
-lazy val `main` = project.in(file("src-main")).settings(
+lazy val `main` = crossProject(JSPlatform, JVMPlatform)
+    .crossType(CrossType.Pure)
+    .in(file("src-main")).settings(
+  sharedSettings,
+).jvmSettings(
+  libraryDependencies ++= Seq(
+    "org.scala-lang.modules" %%% "scala-parser-combinators" % "1.1.2"
+  ),
+)
+
+lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
   sharedSettings,
   libraryDependencies ++= {
     val version = "3.2.3"
@@ -22,9 +34,7 @@ lazy val `main` = project.in(file("src-main")).settings(
       "org.bytedeco" % "skia-platform" % "1.68.0-1.5.2"
     )
   },
-  fork in run := true,
-  baseDirectory in run := file("."),
-)
+).dependsOn(`main`.jvm)
 
 val sharedSettings = Seq(
   scalaVersion := "2.13.1",
@@ -46,6 +56,8 @@ val sharedSettings = Seq(
     "-unchecked", // Enable additional warnings where generated code depends on assumptions.
     //"-P:acyclic:force",
   ),
+  fork in run := true,
+  baseDirectory in run := file("."),
   //  autoCompilerPlugins := true,
   //  addCompilerPlugin("com.lihaoyi" %% "acyclic" %  "0.2.0"),
   //  libraryDependencies += "com.lihaoyi" %% "acyclic" % "0.2.0" % "provided",

@@ -40,7 +40,7 @@ object typefaces {
 
 class Impl() extends draw.Impl {
   override def measure(textStyle: TextStyle, str: draw.Str): TextMeasure = {
-    TextMeasure(0, 0, 0)
+    TextMeasure(0, textStyle.size * 1.5F.toInt, textStyle.size * str.size)
   }
 }
 
@@ -162,7 +162,7 @@ class Window {
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
   medit.draw.impl = new Impl()
   paints = new Paints()
-  editor = new Editor(structure.Language.test)
+  editor = new Editor(structure.MetaLanguage.language)
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     render()
@@ -192,7 +192,11 @@ class Window {
         sk_paint_set_typeface(paint, typefaces(style.typeface))
         sk_canvas_draw_text(canvas, text, text.size, position.left * dp, position.top * dp, paint)
       case DrawCall.Translated(position, calls) =>
+        sk_canvas_save(canvas)
+        sk_canvas_translate(canvas, position.left, position.top)
         calls.foreach(perform)
+        sk_canvas_restore(canvas)
+
     }
   }
 

@@ -11,6 +11,7 @@ case class TextStyle(color: Int, typeface: Typeface, size: Int) {
   def measure(text: Str) = impl.measure(this, text)
 }
 object TextStyle {
+  val default = TextStyle(0xFFFFFFFF, Typeface.Mono, 12)
 }
 
 sealed trait DrawCall {

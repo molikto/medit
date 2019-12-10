@@ -9,7 +9,7 @@ package object input {
     val SUPER = 8
   }
 
-  type Mods
+  type Mods = Int
 
   type Codepoint = Int
 }
