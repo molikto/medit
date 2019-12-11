@@ -99,10 +99,10 @@
         {
           "$type": "tree",
           "left": [
-            
+
           ],
           "b1": [
-            
+
           ],
           "content": [
             {
@@ -110,13 +110,8 @@
               "name": "name"
             },
             {
-              "$type": "literal",
-              "content": [
-                {
-                  "$type": "delimiter",
-                  "str": ":"
-                }
-              ]
+              "$type": "delimiter",
+              "str": ":"
             },
             {
               "$type": "field",
@@ -259,7 +254,7 @@
     },
     {
       "$type": "sum",
-      "name": "linear",
+      "name": "template",
       "cases": [
         {
           "name": "keyword",
@@ -268,44 +263,6 @@
               "name": "name",
               "tag": {
                 "$type": "str"
-              }
-            }
-          ],
-          "template": [
-            
-          ]
-        },
-        {
-          "name": "delimiter",
-          "fields": [
-            {
-              "name": "str",
-              "tag": {
-                "$type": "str"
-              }
-            }
-          ],
-          "template": [
-            
-          ]
-        }
-      ]
-    },
-    {
-      "$type": "sum",
-      "name": "template",
-      "cases": [
-        {
-          "name": "literal",
-          "fields": [
-            {
-              "name": "content",
-              "tag": {
-                "$type": "arr",
-                "item": {
-                  "$type": "ref",
-                  "name": "linear"
-                }
               }
             }
           ],
@@ -378,6 +335,20 @@
                   "$type": "ref",
                   "name": "linear"
                 }
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "delimiter",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
               }
             }
           ],

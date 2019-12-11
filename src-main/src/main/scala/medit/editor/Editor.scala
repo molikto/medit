@@ -15,7 +15,7 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   @nullable var editMode: Node = null
 
   def render(width: Int): DrawCall = {
-    root.layout(width)
+    root.layout(width, false)
     var rect = root.rect(focus)
     if (editMode != null) rect = rect.copy(width = 1)
     DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.cursor), root.draw))
@@ -28,6 +28,14 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
       case 'd' =>
         if (root(focus).childs.nonEmpty) {
           focus = focus :+ 0
+        }
+      case 'D' =>
+        if (focus.nonEmpty) {
+          root(focus.dropRight(1)) match {
+            case col: Node.Collection =>
+              col.tryDelete(focus.last)
+            case _ =>
+          }
         }
       case 'n' =>
         if (focus.nonEmpty) {

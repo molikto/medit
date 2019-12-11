@@ -84,19 +84,11 @@ sealed trait Type {
   /** MEDIT_EXTRA_END **/
 }
 
-sealed trait Linear
-object Linear {
-  @upickle.implicits.key("keyword")
-  case class Keyword(name: String) extends Linear
-  @upickle.implicits.key("delimiter")
-  case class Delimiter(str: String) extends Linear
-  implicit val rw: RW[Linear] = RW.merge(macroRW[Keyword], macroRW[Delimiter])
-}
-
 sealed trait Template {
   /** MEDIT_EXTRA_START **/
   def resolve(fields: Seq[NameTypeTag]): Unit = this match {
-    case Template.Literal(_) =>
+    case Template.Delimiter(_) =>
+    case Template.Keyword(_) =>
     case f@Template.Field(name) =>
       f.index = fields.indexWhere(_.name == name)
     case Template.Tree(left, b1, content, sep, b2) =>
@@ -109,21 +101,23 @@ object Template {
   /** MEDIT_EXTRA_START **/
   def nameDefault(name: String, fields: Seq[NameTypeTag]): Template = {
     if (fields.isEmpty) {
-      Literal(Seq(Linear.Keyword(name)))
+      Keyword(name)
     } else {
       Tree(
-        Seq(Linear.Keyword(name)),
-        Some(Linear.Delimiter("(")),
+        Seq(Keyword(name)),
+        Some(Delimiter("(")),
         fields.map(f => Template.Field(f.name)),
-        Some(Linear.Delimiter(",")),
-        Some(Linear.Delimiter(")"))
+        Some(Delimiter(",")),
+        Some(Delimiter(")"))
       )
     }
   }
   /** MEDIT_EXTRA_END **/
 
-  @upickle.implicits.key("literal")
-  case class Literal(content: Seq[Linear]) extends Template
+  @upickle.implicits.key("keyword")
+  case class Keyword(name: String) extends Template
+  @upickle.implicits.key("delimiter")
+  case class Delimiter(str: String) extends Template
   @upickle.implicits.key("field")
   case class Field(name: String) extends Template {
     /** MEDIT_EXTRA_START **/
@@ -131,9 +125,9 @@ object Template {
     /** MEDIT_EXTRA_END **/
   }
   @upickle.implicits.key("tree")
-  case class Tree(left: Seq[Linear], b1: Option[Linear], content: Seq[Template], sep: Option[Linear], b2: Option[Linear]) extends Template
+  case class Tree(left: Seq[Template], b1: Option[Template], content: Seq[Template], sep: Option[Template], b2: Option[Template]) extends Template
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Literal], macroRW[Field], macroRW[Tree], macroRW[Field])
+  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field])
 
 }
 
