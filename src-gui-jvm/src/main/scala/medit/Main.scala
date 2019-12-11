@@ -60,7 +60,7 @@ class Window {
 
   lazy val glinterface = gr_glinterface_create_native_interface()
 
-  var windowSize: (Int, Int) = (500, 500)
+  var windowSize: (Int, Int) = (840, 1400)
   var frameBufferSize: (Int, Int) = null
   def calculateDp(): Unit = {
     dp = 1f * frameBufferSize._1 / windowSize._1
@@ -87,7 +87,7 @@ class Window {
   glfwWindowHint(GLFW_STENCIL_BITS, 0)
   //glfwWindowHint(GLFW_ALPHA_BITS, 0)
   glfwWindowHint(GLFW_DEPTH_BITS, 0)
-  window = glfwCreateWindow(600, 600, "medit", NULL, NULL)
+  window = glfwCreateWindow(windowSize._1, windowSize._2, "medit", NULL, NULL)
   if (window == NULL) throw new RuntimeException("Failed to create the GLFW window")
   glfwSetCharModsCallback(window, (window: Long, codepoint: Int, mods: Int) => {
     editor.onChar(codepoint, mods)
@@ -164,7 +164,8 @@ class Window {
   createSurface()
   glfwSwapInterval(1)
   glfwShowWindow(window)
-  //glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
+  val rgb = 43f / 255
+  glClearColor(rgb, rgb, rgb, 0.0f)
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
   medit.draw.impl = new Impl()
   paints = new Paints()

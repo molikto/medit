@@ -2,6 +2,7 @@ package medit.editor
 
 import medit.{draw, editor}
 import medit.draw.{DrawCall, Position, Rect, Size, TextMeasure, TextStyle}
+import medit.structure.Template.{LeftPad, RightPad}
 import medit.structure.{Data, Language, NameTypeTag, Template, Type, TypeTag}
 
 import scala.collection.mutable
@@ -207,6 +208,8 @@ object Node {
         left += e.width
         (DrawTemplate.Group(calls), Size(ymax + mymax, left), ymax)
       } else {
+        val (pc, p, _) = layoutLinear(left.reverse.dropWhile(_.isInstanceOf[RightPad]).reverse)
+        val (ec, e, _) = layoutLinear(end.dropWhile(_.isInstanceOf[LeftPad]))
         var calls = Seq(pc)
         var width = p.width
         var top = p.height
@@ -214,7 +217,7 @@ object Node {
           calls = calls :+ c._1.translated(Position(top, Node.DefaultIndent, 0))
           top += c._2.height
           width = (Node.DefaultIndent + c._2.width) max width
-          // TODO add seperator
+          // FIXME add seperator
         })
         calls = calls :+ ec.translated(Position(top, 0, 0))
         top += e.height
@@ -223,27 +226,31 @@ object Node {
       }
     }
 
+    def layoutText(style: TextStyle, name: String, leftPad: Float, rightPad: Float) = {
+      val measure = style.measure(name)
+      (DrawTemplate.Just(DrawCall.Text(Position(measure.y, leftPad, 0), style, name)), Size(measure.y + measure.my, measure.w + leftPad + rightPad), measure.y)
+    }
+
     def layout(left: Template, width: Int, forceLinear: Boolean): LayoutRes = {
       left match {
         case Template.Keyword(name) =>
-          val style = TextStyle.keyword
-          val measure = style.measure(name)
-          (DrawTemplate.Just(DrawCall.Text(Position(measure.y, 0, 0), style, name)), Size(measure.y + measure.my, measure.w), measure.y)
+          layoutText(TextStyle.keyword, name, 0F, 0F)
         case Template.Separator(name) =>
           val style = TextStyle.delimiters
-          val measure = style.measure(name)
-          val unit = style.unit
-          (DrawTemplate.Just(DrawCall.Text(Position(measure.y, unit.w / 2, 0), style, name)), Size(measure.y + measure.my, measure.w + unit.w), measure.y)
+          val unit = style.unit.w / 2
+          layoutText(style, name, unit, unit)
+        case Template.RightPad(str) =>
+          layoutText(TextStyle.delimiters, str, 0F, 0F)
+        case Template.LeftPad(str) =>
+          layoutText(TextStyle.delimiters, str, 0F, 0F)
         case Template.Delimiter(str) =>
-          val style = TextStyle.delimiters
-          val measure = style.measure(str)
-          (DrawTemplate.Just(DrawCall.Text(Position(measure.y, 0, 0), style, str)), Size(measure.y + measure.my, measure.w), measure.y)
+          layoutText(TextStyle.delimiters, str, 0F, 0F)
         case f: Template.Field =>
           val c = childs(f.index)
           c.layout(width, forceLinear)
           (DrawTemplate.Child(f.index), c.size, c.baseline)
         case Template.Unfold(c) =>
-          layout(c, width, forceLinear) // TODO handle unfold more cleanly, maybe restrictions
+          layout(c, width, forceLinear) // FIXME unfold handling is bad
         case Template.Tree(left, b1, content, sep, b2) =>
           val cons = content match {
             case Seq(Template.Unfold(f@Template.Field(_))) =>
@@ -255,7 +262,7 @@ object Node {
           }
           layoutComposite(left ++ b1,
             cons,
-            sep.toSeq, b2.toSeq, width, forceLinear)
+            sep.toSeq, b2, width, forceLinear)
       }
     }
   }

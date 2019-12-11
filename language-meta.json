@@ -359,6 +359,10 @@
                 {
                   "$type": "delimiter",
                   "str": "{"
+                },
+                {
+                  "$type": "right_pad",
+                  "str": " "
                 }
               ],
               "content": [
@@ -377,6 +381,10 @@
                 }
               ],
               "b2": [
+                {
+                  "$type": "left_pad",
+                  "str": " "
+                },
                 {
                   "$type": "delimiter",
                   "str": "}"
@@ -435,7 +443,7 @@
             {
               "name": "b1",
               "tag": {
-                "$type": "opt",
+                "$type": "arr",
                 "item": {
                   "$type": "ref",
                   "name": "template"
@@ -465,11 +473,39 @@
             {
               "name": "b2",
               "tag": {
-                "$type": "opt",
+                "$type": "arr",
                 "item": {
                   "$type": "ref",
                   "name": "template"
                 }
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "right_pad",
+          "fields": [
+            {
+              "name": "str",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "left_pad",
+          "fields": [
+            {
+              "name": "str",
+              "tag": {
+                "$type": "str"
               }
             }
           ],

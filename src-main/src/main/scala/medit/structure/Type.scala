@@ -89,9 +89,6 @@ sealed trait Type {
 sealed trait Template {
   /** MEDIT_EXTRA_START **/
   def resolve(fields: Seq[NameTypeTag]): Unit = this match {
-    case Template.Delimiter(_) =>
-    case Template.Separator(_) =>
-    case Template.Keyword(_) =>
     case f@Template.Field(name) =>
       f.index = fields.indexWhere(_.name == name)
       assert(f.index != -1)
@@ -103,6 +100,7 @@ sealed trait Template {
       content.foreach(_.resolve(fields))
     case Template.Unfold(content) =>
       content.resolve(fields)
+    case _ =>
   }
   /** MEDIT_EXTRA_END **/
 }
@@ -115,10 +113,10 @@ object Template {
     } else {
       Tree(
         Seq(Keyword(name)),
-        Some(Delimiter("(")),
+        Seq(Delimiter("(")),
         fields.map(f => Template.Field(f.name)),
         Some(Separator(",")),
-        Some(Delimiter(")"))
+        Seq(Delimiter(")"))
       )
     }
   }
@@ -130,6 +128,10 @@ object Template {
   case class Delimiter(str: String) extends Template
   @upickle.implicits.key("separator")
   case class Separator(str: String) extends Template
+  @upickle.implicits.key("left_pad")
+  case class LeftPad(str: String) extends Template
+  @upickle.implicits.key("right_pad")
+  case class RightPad(str: String) extends Template
   @upickle.implicits.key("field")
   case class Field(name: String) extends Template {
     /** MEDIT_EXTRA_START **/
@@ -139,9 +141,9 @@ object Template {
   @upickle.implicits.key("unfold")
   case class Unfold(content: Template) extends Template
   @upickle.implicits.key("tree")
-  case class Tree(left: Seq[Template], b1: Option[Template], content: Seq[Template], sep: Option[Template], b2: Option[Template]) extends Template
+  case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold])
+  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad], macroRW[RightPad])
 
 }
 
