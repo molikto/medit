@@ -46,7 +46,7 @@ sealed trait Node {
   }
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
-  def layout(width: Int, forceLinear: Boolean): Unit
+  def layout(width: Float, forceLinear: Boolean): Unit
 
   def flatten(_draw: DrawTemplate): DrawCall = _draw match {
     case DrawTemplate.Child(i) => childs(i).draw
@@ -63,7 +63,7 @@ sealed trait Node {
 
 object Node {
 
-  val DefaultIndent = TextStyle.delimiters.unit * 2
+  val DefaultIndent: Float = TextStyle.delimiters.unit.w * 2
 
   def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = {
     def fromFields(s: Structure, fields: Seq[NameTypeTag], obj: mutable.Map[String, ujson.Value]): Unit = {
@@ -180,7 +180,7 @@ object Node {
       }
     }
 
-    @inline def layoutComposite(left: Seq[Template], cs0: Seq[LayoutRes], sep: Seq[Template], end: Seq[Template], width: Int, forceLinear: Boolean): LayoutRes = {
+    @inline def layoutComposite(left: Seq[Template], cs0: Seq[LayoutRes], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): LayoutRes = {
       val (pc, p, pb) = layoutLinear(left)
       val cs = cs0.map(_._2.width).sum
       val (sc, s, sb) = layoutLinear(sep)
@@ -231,7 +231,7 @@ object Node {
       (DrawTemplate.Just(DrawCall.Text(Position(measure.y, leftPad, 0), style, name)), Size(measure.y + measure.my, measure.w + leftPad + rightPad), measure.y)
     }
 
-    def layout(left: Template, width: Int, forceLinear: Boolean): LayoutRes = {
+    def layout(left: Template, width: Float, forceLinear: Boolean): LayoutRes = {
       left match {
         case Template.Keyword(name) =>
           layoutText(TextStyle.keyword, name, 0F, 0F)
@@ -286,7 +286,7 @@ object Node {
     }
 
 
-    override def layout(width: Int, forceLinear: Boolean): Unit = {
+    override def layout(width: Float, forceLinear: Boolean): Unit = {
       val res = layout(template, width, forceLinear)
       resolveChildPositions(res._1)
       _draw = res._1
@@ -320,7 +320,7 @@ object Node {
       ujson.Arr.from(childs.map(_.save()))
     }
 
-    def layout(mapper: Seq[LayoutRes] => LayoutRes, width: Int, forceLinear: Boolean): Unit = {
+    def layout(mapper: Seq[LayoutRes] => LayoutRes, width: Float, forceLinear: Boolean): Unit = {
       val cs0 = childs.zipWithIndex.map(a => {
         val res = a._1.layout(width, forceLinear)
         (DrawTemplate.Child(a._2), a._1.size, a._1.baseline)
@@ -332,7 +332,7 @@ object Node {
       baseline = res._3
     }
 
-    override def layout(width: Int, forceLinear: Boolean): Unit = {
+    override def layout(width: Float, forceLinear: Boolean): Unit = {
       val left = Seq(Template.Delimiter("["))
       val sep = Seq(Template.Separator(","))
       val end = Seq(Template.Delimiter("]"))
@@ -368,7 +368,7 @@ object Node {
 
     def style: TextStyle
 
-    override def layout(width: Int, forceLinear: Boolean): Unit = {
+    override def layout(width: Float, forceLinear: Boolean): Unit = {
       val str = if (buffer.isEmpty) "?" else buffer
       val ts = style.measure(str)
       baseline = ts.y

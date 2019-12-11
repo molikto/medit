@@ -39,7 +39,6 @@ lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
   },
 ).dependsOn(`main`.jvm)
 
-
 val sharedSettings = Seq(
   scalaVersion := "2.13.1",
   resolvers ++= Seq(

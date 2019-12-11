@@ -138,7 +138,6 @@ object Template {
     var index = -1
     /** MEDIT_EXTRA_END **/
   }
-  case object Nil extends Template
   @upickle.implicits.key("unfold")
   case class Unfold(content: Template) extends Template
   @upickle.implicits.key("tree")
