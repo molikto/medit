@@ -6,7 +6,7 @@
  
 ## build & run
 
-standard SBT project `sbt main/compile`, `sbt main/run`, you need `-XstartOnFirstThread` JVM option on macOS.
+standard SBT project `sbt gui-jvm/compile`, `sbt gui-jvm/run`, you need `-XstartOnFirstThread` JVM option on macOS.
 
 ## architecture
  
