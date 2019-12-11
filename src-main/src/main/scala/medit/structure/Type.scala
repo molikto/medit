@@ -90,12 +90,19 @@ sealed trait Template {
   /** MEDIT_EXTRA_START **/
   def resolve(fields: Seq[NameTypeTag]): Unit = this match {
     case Template.Delimiter(_) =>
+    case Template.Separator(_) =>
     case Template.Keyword(_) =>
     case f@Template.Field(name) =>
       f.index = fields.indexWhere(_.name == name)
       assert(f.index != -1)
     case Template.Tree(left, b1, content, sep, b2) =>
+      left.foreach(_.resolve(fields))
+      b1.foreach(_.resolve(fields))
+      sep.foreach(_.resolve(fields))
+      b2.foreach(_.resolve(fields))
       content.foreach(_.resolve(fields))
+    case Template.Unfold(content) =>
+      content.resolve(fields)
   }
   /** MEDIT_EXTRA_END **/
 }
@@ -110,7 +117,7 @@ object Template {
         Seq(Keyword(name)),
         Some(Delimiter("(")),
         fields.map(f => Template.Field(f.name)),
-        Some(Delimiter(",")),
+        Some(Separator(",")),
         Some(Delimiter(")"))
       )
     }
@@ -118,19 +125,23 @@ object Template {
   /** MEDIT_EXTRA_END **/
 
   @upickle.implicits.key("keyword")
-  case class Keyword(name: String) extends Template
+  case class Keyword(str: String) extends Template
   @upickle.implicits.key("delimiter")
   case class Delimiter(str: String) extends Template
+  @upickle.implicits.key("separator")
+  case class Separator(str: String) extends Template
   @upickle.implicits.key("field")
   case class Field(name: String) extends Template {
     /** MEDIT_EXTRA_START **/
     var index = -1
     /** MEDIT_EXTRA_END **/
   }
+  @upickle.implicits.key("unfold")
+  case class Unfold(content: Template) extends Template
   @upickle.implicits.key("tree")
   case class Tree(left: Seq[Template], b1: Option[Template], content: Seq[Template], sep: Option[Template], b2: Option[Template]) extends Template
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field])
+  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold])
 
 }
 

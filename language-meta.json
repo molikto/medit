@@ -110,7 +110,7 @@
               "name": "name"
             },
             {
-              "$type": "delimiter",
+              "$type": "separator",
               "str": ":"
             },
             {
@@ -159,7 +159,51 @@
         }
       ],
       "template": [
-        
+        {
+          "$type": "tree",
+          "left": [
+            {
+              "$type": "keyword",
+              "str": "case"
+            },
+            {
+              "$type": "delimiter",
+              "str": " "
+            },
+            {
+              "$type": "field",
+              "name": "name"
+            }
+          ],
+          "b1": [
+            {
+              "$type": "delimiter",
+              "str": "("
+            }
+          ],
+          "content": [
+            {
+              "$type": "field",
+              "name": "fields"
+            },
+            {
+              "$type": "field",
+              "name": "template"
+            }
+          ],
+          "sep": [
+            {
+              "$type": "separator",
+              "str": ","
+            }
+          ],
+          "b2": [
+            {
+              "$type": "delimiter",
+              "str": ")"
+            }
+          ]
+        }
       ]
     },
     {
@@ -223,7 +267,51 @@
             }
           ],
           "template": [
-            
+            {
+              "$type": "tree",
+              "left": [
+                {
+                  "$type": "keyword",
+                  "str": "record"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": " "
+                },
+                {
+                  "$type": "field",
+                  "name": "name"
+                }
+              ],
+              "b1": [
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                }
+              ],
+              "content": [
+                {
+                  "$type": "field",
+                  "name": "fields"
+                },
+                {
+                  "$type": "field",
+                  "name": "template"
+                }
+              ],
+              "sep": [
+                {
+                  "$type": "separator",
+                  "str": ","
+                }
+              ],
+              "b2": [
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -247,7 +335,54 @@
             }
           ],
           "template": [
-            
+            {
+              "$type": "tree",
+              "left": [
+                {
+                  "$type": "keyword",
+                  "str": "sum"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": " "
+                },
+                {
+                  "$type": "field",
+                  "name": "name"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": " "
+                }
+              ],
+              "b1": [
+                {
+                  "$type": "delimiter",
+                  "str": "{"
+                }
+              ],
+              "content": [
+                {
+                  "$type": "unfold",
+                  "content": {
+                    "$type": "field",
+                    "name": "cases"
+                  }
+                }
+              ],
+              "sep": [
+                {
+                  "$type": "separator",
+                  "str": ";"
+                }
+              ],
+              "b2": [
+                {
+                  "$type": "delimiter",
+                  "str": "}"
+                }
+              ]
+            }
           ]
         }
       ]
@@ -349,6 +484,35 @@
               "name": "str",
               "tag": {
                 "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "separator",
+          "fields": [
+            {
+              "name": "str",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "unfold",
+          "fields": [
+            {
+              "name": "content",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
               }
             }
           ],

@@ -8,6 +8,8 @@ import scala.collection.mutable
 import medit.utils._
 import ujson.Value
 
+import scala.collection.immutable.{AbstractSeq, LinearSeq}
+
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
 
@@ -182,7 +184,7 @@ object Node {
       val cs = cs0.map(_._2.width).sum
       val (sc, s, sb) = layoutLinear(sep)
       val (ec, e, eb) = layoutLinear(end)
-      if (!cs0.exists(_._3 < 0) && p.width + cs + s.width * cs0.size + e.width <= width) {
+      if (forceLinear || (!cs0.exists(_._3 < 0) && p.width + cs + s.width * cs0.size + e.width <= width)) {
         var ymax = pb max eb max sb
         var mymax = (p.height - pb) max (e.height - eb) max (s.height - sb)
         cs0.foreach(a => {
@@ -227,6 +229,11 @@ object Node {
           val style = TextStyle.keyword
           val measure = style.measure(name)
           (DrawTemplate.Just(DrawCall.Text(Position(measure.y, 0, 0), style, name)), Size(measure.y + measure.my, measure.w), measure.y)
+        case Template.Separator(name) =>
+          val style = TextStyle.delimiters
+          val measure = style.measure(name)
+          val unit = style.unit
+          (DrawTemplate.Just(DrawCall.Text(Position(measure.y, unit.w / 2, 0), style, name)), Size(measure.y + measure.my, measure.w + unit.w), measure.y)
         case Template.Delimiter(str) =>
           val style = TextStyle.delimiters
           val measure = style.measure(str)
@@ -235,9 +242,19 @@ object Node {
           val c = childs(f.index)
           c.layout(width, forceLinear)
           (DrawTemplate.Child(f.index), c.size, c.baseline)
+        case Template.Unfold(c) =>
+          layout(c, width, forceLinear) // TODO handle unfold more cleanly, maybe restrictions
         case Template.Tree(left, b1, content, sep, b2) =>
+          val cons = content match {
+            case Seq(Template.Unfold(f@Template.Field(_))) =>
+              val c = childs(f.index)
+              c.asInstanceOf[Collection].layout(cs => layoutComposite(Seq.empty, cs, sep.toSeq, Seq.empty, width, forceLinear), width, forceLinear)
+              Seq((DrawTemplate.Child(f.index), c.size, c.baseline))
+            case _ =>
+              content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
+          }
           layoutComposite(left ++ b1,
-            content.map(a => layout(a, width - Node.DefaultIndent, forceLinear)),
+            cons,
             sep.toSeq, b2.toSeq, width, forceLinear)
       }
     }
@@ -296,19 +313,24 @@ object Node {
       ujson.Arr.from(childs.map(_.save()))
     }
 
-    override def layout(width: Int, forceLinear: Boolean): Unit = {
-      val left = Seq(Template.Delimiter("["))
-      val sep = Seq(Template.Delimiter(","))
-      val end = Seq(Template.Delimiter("]"))
+    def layout(mapper: Seq[LayoutRes] => LayoutRes, width: Int, forceLinear: Boolean): Unit = {
       val cs0 = childs.zipWithIndex.map(a => {
-        val res = a._1.layout(width - Node.DefaultIndent, forceLinear)
+        val res = a._1.layout(width, forceLinear)
         (DrawTemplate.Child(a._2), a._1.size, a._1.baseline)
       })
-      val res = layoutComposite(left, cs0, sep, end, width, forceLinear)
+      val res = mapper(cs0)
       resolveChildPositions(res._1)
       _draw = res._1
       size = res._2
       baseline = res._3
+    }
+
+    override def layout(width: Int, forceLinear: Boolean): Unit = {
+      val left = Seq(Template.Delimiter("["))
+      val sep = Seq(Template.Separator(","))
+      val end = Seq(Template.Delimiter("]"))
+      layout(cs =>
+        layoutComposite(left, cs, sep, end, width, forceLinear), width - Node.DefaultIndent, forceLinear)
     }
   }
 

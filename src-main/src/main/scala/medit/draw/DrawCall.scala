@@ -25,6 +25,7 @@ object Typeface {
 
 case class TextStyle(color: Int, typeface: Typeface, size: Int) {
   def measure(text: Str) = impl.measure(this, text)
+  lazy val unit = measure(" ")
 }
 
 
