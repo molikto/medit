@@ -1,5 +1,7 @@
 # medit
 
+[![Actions Status](https://github.com/molikto/medit/workflows/main/badge.svg)](https://github.com/molikto/medit/actions)
+
  The structural editor framework for mlang
  
 ## build & run
