@@ -1,14 +1,17 @@
 package medit.editor
 
-import medit.draw
+import medit.{draw, editor}
 import medit.draw.{DrawCall, Position, Rect, Size, TextMeasure, TextStyle}
-import medit.structure.{Data, Language, Linear, Template, Type, TypeTag}
+import medit.structure.{Data, Language, Linear, NameTypeTag, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
+import ujson.Value
 
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
+
+  def save(): ujson.Value
 
   protected var _parent: Node
   @nullable def parent: Node = _parent
@@ -24,41 +27,73 @@ sealed trait Node {
   // all in parent coordinate
   protected var top: Float = 0
   protected var left: Float = 0
-  protected var _draw: DrawCall = null
+  protected var _draw: DrawTemplate = null
   protected var baseline: Float = -1
   def multiline = baseline < 0
   protected var size: Size = null
 
   def rect = Rect(top, left, size.height, size.width)
+  def rect(focus: Seq[Int]): Rect = {
+    if (focus.isEmpty) {
+      rect
+    } else {
+      childs(focus.head).rect(focus.tail) + Position(top, left, 0)
+    }
+  }
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
   def layout(width: Int): Unit
-  def draw: DrawCall = _draw
+
+  def flatten(_draw: DrawTemplate): DrawCall = _draw match {
+    case DrawTemplate.Child(i) => childs(i).draw
+    case DrawTemplate.Translated(position, temps) =>
+      DrawCall.Translated(position, temps.map(flatten))
+    case DrawTemplate.Group(temps) =>
+      DrawCall.Group(temps.map(flatten))
+    case DrawTemplate.Just(call) =>
+      call
+  }
+
+  def draw: DrawCall = flatten(_draw)
 }
 
 object Node {
 
   val DefaultIndent = 8
 
-  def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = a match {
-    case TypeTag.Str => new Str(parent).init(data.str)
-    case coll: TypeTag.Coll =>
-      val col = new Collection(parent, language, coll)
-      col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
-      col
-    case n: TypeTag.Ref => language.types(n.index) match {
-      case record: Type.Record =>
-        val s = new Structure(parent, language, n, -1)
-        val obj = data.obj
-        s.init(record.fields.map(f => create(s, language, f.tag, obj(f.name))))
-        s
-      case sum: Type.Sum =>
-        val obj = data.obj
-        val typ = obj("$type").str
-        val id = sum.cases.indexWhere(_.name == typ)
-        val s = new Structure(parent, language, n, id)
-        s.init(sum.cases(id).fields.map(f => create(s, language, f.tag, obj(f.name))))
-        s
+  def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = {
+    def fromFields(s: Structure, fields: Seq[NameTypeTag], obj: mutable.Map[String, ujson.Value]): Unit = {
+      s.init(fields.map(f => {
+        if (obj.contains(f.name)) {
+          create(s, language, f.tag, obj(f.name))
+        } else {
+          default(s, language, f.tag)
+        }
+      }))
+    }
+    a match {
+      case TypeTag.Str => new Str(parent).init(data.str)
+      case coll: TypeTag.Coll =>
+        val col = new Collection(parent, language, coll)
+        col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
+        col
+      case n: TypeTag.Ref => language.types(n.index) match {
+        case record: Type.Record =>
+          val s = new Structure(parent, language, n, -1)
+          fromFields(s, record.fields, data.obj)
+          s
+        case sum: Type.Sum =>
+          if (data.obj.contains("$choice")) {
+            new Choice(parent, language, n).init(data.obj("$choice").str)
+          } else {
+            val obj = data.obj
+            val typ = obj("$type").str
+            val id = sum.cases.indexWhere(_.name == typ)
+            val s = new Structure(parent, language, n, id)
+            fromFields(s,sum.cases(id).fields, obj)
+            s
+          }
+      }
     }
   }
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
@@ -78,10 +113,10 @@ object Node {
     default(null, a, a.root)
   }
 
-  type LayoutRes = (draw.DrawCall, Size, Float)
+  type LayoutRes = (DrawTemplate, Size, Float)
 
   def layoutLinear(left: Seq[Linear]): LayoutRes = {
-    var calls = Seq.empty[DrawCall.Text]
+    var calls = Seq.empty[DrawTemplate.Just]
     var y = 0F
     var my = 0F
     left.foreach {
@@ -101,15 +136,15 @@ object Node {
       case Linear.Keyword(name) =>
         val style = TextStyle.keyword
         val measure = style.measure(name)
-        calls = calls :+ DrawCall.Text(Position(y, width, 0), style, name)
+        calls = calls :+ DrawTemplate.Just(DrawCall.Text(Position(y, width, 0), style, name))
         width += measure.w
       case Linear.Delimiter(str) =>
         val style = TextStyle.delimiters
         val measure = style.measure(str)
-        calls = calls :+ DrawCall.Text(Position(y, width, 0), style, str)
+        calls = calls :+ DrawTemplate.Just(DrawCall.Text(Position(y, width, 0), style, str))
         width += measure.w
     }
-    (DrawCall.Group(calls), Size(y + my, width), y)
+    (DrawTemplate.Group(calls), Size(y + my, width), y)
   }
 
 
@@ -140,7 +175,7 @@ object Node {
       })
       calls = calls :+ ec.translated(Position(ymax - eb, left, 0))
       left += e.width
-      (DrawCall.Group(calls), Size(ymax + mymax, left), ymax)
+      (DrawTemplate.Group(calls), Size(ymax + mymax, left), ymax)
     } else {
       var calls = Seq(pc)
       var width = p.width
@@ -154,7 +189,7 @@ object Node {
       calls = calls :+ ec.translated(Position(top, 0, 0))
       top += e.height
       width = width max e.width
-      (DrawCall.Group(calls), Size(top, width), -1)
+      (DrawTemplate.Group(calls), Size(top, width), -1)
     }
   }
 
@@ -177,7 +212,20 @@ object Node {
     }
 
 
-
+    def resolveChildPositions(_1: DrawTemplate, position: Position = Position.unit): Unit = _1 match {
+      case DrawTemplate.Child(i) =>
+        if (childs.size <= i) {
+          logicError()
+        }
+        val c = childs(i)
+        c.left = position.left
+        c.top = position.top
+      case DrawTemplate.Group(temps) =>
+        temps.foreach(a => resolveChildPositions(a, position))
+      case DrawTemplate.Translated(pos, temps) =>
+        temps.foreach(a => resolveChildPositions(a, position + pos))
+      case _: DrawTemplate.Just =>
+    }
   }
 
   class Structure(
@@ -185,6 +233,11 @@ object Node {
                    val language: Language, val tag: TypeTag.Ref, val index: Int) extends HaveChilds {
     def typ = language.types(tag.index)
     def childTypes = typ(index)
+    override def save(): Value = {
+      val cs = childs.zip(childTypes).map(p => (p._2.name, p._1.save()))
+      val cs0 = if (index == -1) cs else Seq(("$type", ujson.Str(typ.asInstanceOf[Type.Sum].cases(index).name))) ++ cs
+      ujson.Obj.from(cs0)
+    }
 
     val template: Template = typ match {
       case record: Type.Record =>
@@ -195,10 +248,10 @@ object Node {
 
     def layout(template: Template, width: Int): LayoutRes = {
       template match {
-        case Template.Field(i) =>
-          val c = childs(i)
+        case f: Template.Field =>
+          val c = childs(f.index)
           c.layout(width)
-          (c.draw, c.size, c.baseline)
+          (DrawTemplate.Child(f.index), c.size, c.baseline)
         case Template.Tree(left, b1, content, sep, b2) =>
           layoutComposite(left ++ b1,
             content.map(a => layout(a, width - Node.DefaultIndent)),
@@ -209,12 +262,15 @@ object Node {
       }
     }
 
+
     override def layout(width: Int): Unit = {
       val res = layout(template, width)
+      resolveChildPositions(res._1)
       _draw = res._1
       size = res._2
       baseline = res._3
     }
+
   }
 
   class Collection(
@@ -226,14 +282,20 @@ object Node {
       _childs.size - 1
     }
 
+    override def save(): Value = {
+      ujson.Arr.from(childs.map(_.save()))
+    }
 
     override def layout(width: Int): Unit = {
       val left = Seq(Linear.Delimiter("["))
       val sep = Seq(Linear.Delimiter(","))
       val end = Seq(Linear.Delimiter("]"))
-      childs.foreach(a => a.layout(width - Node.DefaultIndent))
-      val cs0 = childs.map(a => (a._draw, a.size, a.baseline))
+      val cs0 = childs.zipWithIndex.map(a => {
+        val res = a._1.layout(width - Node.DefaultIndent)
+        (DrawTemplate.Child(a._2), a._1.size, a._1.baseline)
+      })
       val res = layoutComposite(left, cs0, sep, end, width)
+      resolveChildPositions(res._1)
       _draw = res._1
       size = res._2
       baseline = res._3
@@ -265,11 +327,13 @@ object Node {
     }
 
 
+    def style: TextStyle
+
     override def layout(width: Int): Unit = {
-      val ts = TextStyle.reference.measure(buffer)
+      val ts = style.measure(buffer)
       baseline = ts.y
       size = Size(ts.y + ts.my, ts.w)
-      _draw = DrawCall.Text(Position(baseline, 0, 0), TextStyle.reference, buffer)
+      _draw = DrawTemplate.Just(DrawCall.Text(Position(baseline, 0, 0), style, buffer))
     }
   }
 
@@ -277,7 +341,14 @@ object Node {
       override protected var _parent: Node,
       val language: Language, val tag: TypeTag.Ref
   ) extends StringLeaf {
+    def init(c: String): _root_.medit.editor.Node = {
+      buffer = c
+      this
+    }
+
     def typ = language.types(tag.index).asInstanceOf[Type.Sum]
+
+    override def save(): Value = ujson.Obj.from(Seq(("$chioce", buffer)))
 
     override def tryCommit(buffer: String): Boolean = {
       typ.cases.indexWhere(_.name == buffer) match {
@@ -293,12 +364,19 @@ object Node {
           true
       }
     }
+
+    override def style: TextStyle = TextStyle.reference
   }
 
   class Str(
       override protected var _parent: Node
   ) extends StringLeaf {
-    def init(str: String): Node = {
+
+  override def style: TextStyle = TextStyle.reference
+
+  override def save(): Value = ujson.Str(buffer)
+
+  def init(str: String): Node = {
       buffer = str
       this
     }

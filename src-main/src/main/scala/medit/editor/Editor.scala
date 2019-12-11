@@ -7,7 +7,7 @@ import medit.utils.nullable
 
 import scala.collection.mutable.ArrayBuffer
 
-class Editor(language: Language, data: ujson.Value) extends Mover {
+class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) extends Mover {
 
   // states
   protected val root = Node.create(null, language, language.root, data)
@@ -16,7 +16,8 @@ class Editor(language: Language, data: ujson.Value) extends Mover {
 
   def render(width: Int): DrawCall = {
     root.layout(width)
-    val rect = root(focus).rect.copy(width = if (editMode != null) 1 else 10)
+    var rect = root.rect(focus)
+    if (editMode != null) rect = rect.copy(width = 1)
     DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.cursor), root.draw))
   }
 
@@ -55,6 +56,8 @@ class Editor(language: Language, data: ujson.Value) extends Mover {
         if (index >= 0) {
           focus = focus :+ index
         }
+      case 's' =>
+        save(root.save())
       case _ =>
     }
   } else {

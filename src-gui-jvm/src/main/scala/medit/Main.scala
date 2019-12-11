@@ -40,7 +40,7 @@ object typefaces {
 
 class Impl() extends draw.Impl {
   override def measure(textStyle: TextStyle, str: draw.Str): TextMeasure = {
-    TextMeasure(0, textStyle.size * 1.4F, textStyle.size * str.size * 0.6F)
+    TextMeasure(textStyle.size * 0.35F, textStyle.size * 1.05F, textStyle.size * str.size * 0.6F)
   }
 }
 
@@ -170,7 +170,7 @@ class Window {
   paints = new Paints()
   shapes = new Shapes()
   val lang = structure.MetaLanguage
-  editor = new Editor(lang.language, lang.json)
+  editor = new Editor(lang.language, lang.json, a => lang.save(a))
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     render()

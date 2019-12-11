@@ -7,6 +7,11 @@
         {
           "name": "str",
           "fields": []
+            
+          ],
+          "template": [
+            
+          ]
         },
         {
           "name": "opt",
@@ -18,6 +23,9 @@
                 "name": "typed_tag"
               }
             }
+          ],
+          "template": [
+            
           ]
         },
         {
@@ -30,6 +38,9 @@
                 "name": "typed_tag"
               }
             }
+          ],
+          "template": [
+            
           ]
         },
         {
@@ -42,6 +53,9 @@
                 "name": "typed_tag"
               }
             }
+          ],
+          "template": [
+            
           ]
         },
         {
@@ -52,6 +66,12 @@
               "tag": {
                 "$type": "str"
               }
+            }
+          ],
+          "template": [
+            {
+              "$type": "field",
+              "name": "name"
             }
           ]
         }
@@ -74,6 +94,42 @@
             "name": "typed_tag"
           }
         }
+      ],
+      "template": [
+        {
+          "$type": "tree",
+          "left": [
+            
+          ],
+          "b1": [
+            
+          ],
+          "content": [
+            {
+              "$type": "field",
+              "name": "name"
+            },
+            {
+              "$type": "literal",
+              "content": [
+                {
+                  "$type": "delimiter",
+                  "str": ":"
+                }
+              ]
+            },
+            {
+              "$type": "field",
+              "name": "tag"
+            }
+          ],
+          "sep": [
+            
+          ],
+          "b2": [
+            
+          ]
+        }
       ]
     },
     {
@@ -95,7 +151,20 @@
               "name": "name_typed_tag"
             }
           }
+        },
+        {
+          "name": "template",
+          "tag": {
+            "$type": "opt",
+            "item": {
+              "$type": "ref",
+              "name": "template"
+            }
+          }
         }
+      ],
+      "template": [
+        
       ]
     },
     {
@@ -119,6 +188,9 @@
             "name": "typed_tag"
           }
         }
+      ],
+      "template": [
+        
       ]
     },
     {
@@ -143,7 +215,20 @@
                   "name": "name_typed_tag"
                 }
               }
+            },
+            {
+              "name": "template",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "template"
+                }
+              }
             }
+          ],
+          "template": [
+            
           ]
         },
         {
@@ -165,6 +250,139 @@
                 }
               }
             }
+          ],
+          "template": [
+            
+          ]
+        }
+      ]
+    },
+    {
+      "$type": "sum",
+      "name": "linear",
+      "cases": [
+        {
+          "name": "keyword",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "delimiter",
+          "fields": [
+            {
+              "name": "str",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        }
+      ]
+    },
+    {
+      "$type": "sum",
+      "name": "template",
+      "cases": [
+        {
+          "name": "literal",
+          "fields": [
+            {
+              "name": "content",
+              "tag": {
+                "$type": "arr",
+                "item": {
+                  "$type": "ref",
+                  "name": "linear"
+                }
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "field",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            
+          ]
+        },
+        {
+          "name": "tree",
+          "fields": [
+            {
+              "name": "left",
+              "tag": {
+                "$type": "arr",
+                "item": {
+                  "$type": "ref",
+                  "name": "linear"
+                }
+              }
+            },
+            {
+              "name": "b1",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "linear"
+                }
+              }
+            },
+            {
+              "name": "content",
+              "tag": {
+                "$type": "arr",
+                "item": {
+                  "$type": "ref",
+                  "name": "template"
+                }
+              }
+            },
+            {
+              "name": "sep",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "linear"
+                }
+              }
+            },
+            {
+              "name": "b2",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "linear"
+                }
+              }
+            }
+          ],
+          "template": [
+            
           ]
         }
       ]
