@@ -43,7 +43,7 @@ sealed trait Node {
   }
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
-  def layout(width: Int): Unit
+  def layout(width: Int, forceLinear: Boolean): Unit
 
   def flatten(_draw: DrawTemplate): DrawCall = _draw match {
     case DrawTemplate.Child(i) => childs(i).draw
@@ -116,27 +116,6 @@ object Node {
 
   type LayoutRes = (DrawTemplate, Size, Float)
 
-  def layoutLinear(left: Seq[Linear]): LayoutRes = {
-    var calls = Seq.empty[DrawTemplate.Just]
-    var my = 0F
-    left.foreach {
-      case Linear.Keyword(name) =>
-        val style = TextStyle.keyword
-        val measure = style.measure(name)
-        y = measure.y max y
-        my = measure.my max my
-      case Linear.Delimiter(str) =>
-        val style = TextStyle.delimiters
-        val measure = style.measure(str)
-        y = measure.y max y
-        my = measure.my max my
-    }
-    var width = 0F
-    left.foreach {
-      case Linear.Keyword(name) =>
-        val style = TextStyle.keyword
-        val measure = style.measure(name)
-        calls = calls :+ DrawTemplate.Just(DrawCall.Text(Position(y, width, 0), style, name))
 
 
 
