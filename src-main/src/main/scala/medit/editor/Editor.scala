@@ -15,9 +15,9 @@ class Editor(language: Language, data: ujson.Value) extends Mover {
   @nullable var editMode: Node = null
 
   def render(width: Int): DrawCall = {
-    val cs = root.draw(width)
-    var rect = root(focus).rect.copy(width = if (editMode != null) 1 else 10)
-    DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.cursor), cs))
+    root.layout(width)
+    val rect = root(focus).rect.copy(width = if (editMode != null) 1 else 10)
+    DrawCall.Group(Seq(DrawCall.Rect(rect, ShapeStyle.cursor), root.draw))
   }
 
   def onChar(codepoint: Codepoint, mods: Mods): Unit = if (editMode == null) {

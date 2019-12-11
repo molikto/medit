@@ -1,8 +1,8 @@
 package medit.editor
 
 import medit.draw
-import medit.draw.{DrawCall, Position, Rect, TextStyle}
-import medit.structure.{Data, Language, Template, Type, TypeTag}
+import medit.draw.{DrawCall, Position, Rect, Size, TextMeasure, TextStyle}
+import medit.structure.{Data, Language, Linear, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
@@ -10,14 +10,6 @@ import medit.utils._
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
 
-
-  //
-//  private var _parent: Node = null // root node has empty parent
-//  private var _layout: Layout = null
-//  private var _draw: DrawCall = null
-//  def layout: Layout = ???
-//
-//  def draw(width: Int): DrawCall = _draw
   protected var _parent: Node
   @nullable def parent: Node = _parent
   def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else logicError()
@@ -30,22 +22,24 @@ sealed trait Node {
   def editCommit(): Unit = logicError()
 
   // all in parent coordinate
-  protected var top: Int = 0
-  protected var left: Int = 0
-  protected var width: Int = 0
-  protected var height: Int = 0
+  protected var top: Float = 0
+  protected var left: Float = 0
+  protected var _draw: DrawCall = null
+  protected var baseline: Float = -1
+  def multiline = baseline < 0
+  protected var size: Size = null
 
-  def rect: Rect = Rect(top, left, width, height)
+  def rect = Rect(top, left, size.height, size.width)
 
-
-  def draw(width: Int): DrawCall = {
-    layout(width)
-    ???
-  }
-  def layout(width: Int): Unit = ???
+  // layout will determine itself the size and multiline, then top left is assgined by parent
+  def layout(width: Int): Unit
+  def draw: DrawCall = _draw
 }
 
 object Node {
+
+  val DefaultIndent = 8
+
   def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = a match {
     case TypeTag.Str => new Str(parent).init(data.str)
     case coll: TypeTag.Coll =>
@@ -84,6 +78,86 @@ object Node {
     default(null, a, a.root)
   }
 
+  type LayoutRes = (draw.DrawCall, Size, Float)
+
+  def layoutLinear(left: Seq[Linear]): LayoutRes = {
+    var calls = Seq.empty[DrawCall.Text]
+    var y = 0F
+    var my = 0F
+    left.foreach {
+      case Linear.Keyword(name) =>
+        val style = TextStyle.keyword
+        val measure = style.measure(name)
+        y = measure.y max y
+        my = measure.my max my
+      case Linear.Delimiter(str) =>
+        val style = TextStyle.delimiters
+        val measure = style.measure(str)
+        y = measure.y max y
+        my = measure.my max my
+    }
+    var width = 0F
+    left.foreach {
+      case Linear.Keyword(name) =>
+        val style = TextStyle.keyword
+        val measure = style.measure(name)
+        calls = calls :+ DrawCall.Text(Position(y, width, 0), style, name)
+        width += measure.w
+      case Linear.Delimiter(str) =>
+        val style = TextStyle.delimiters
+        val measure = style.measure(str)
+        calls = calls :+ DrawCall.Text(Position(y, width, 0), style, str)
+        width += measure.w
+    }
+    (DrawCall.Group(calls), Size(y + my, width), y)
+  }
+
+
+
+  @inline def layoutComposite(left: Seq[Linear], cs0: Seq[LayoutRes], sep: Seq[Linear], end: Seq[Linear], width: Int): LayoutRes = {
+    val (pc, p, pb) = layoutLinear(left)
+    val cs = cs0.map(_._2.width).sum
+    val (sc, s, sb) = layoutLinear(sep)
+    val (ec, e, eb) = layoutLinear(end)
+    if (!cs0.exists(_._3 < 0) && p.width + cs + s.width * cs0.size + e.width <= width) {
+      var ymax = pb max eb max sb
+      var mymax = (p.height - pb) max (e.height - eb) max (s.height - sb)
+      cs0.foreach(a => {
+        ymax = a._3 max ymax
+        mymax = (a._2.height - a._3) max mymax
+      })
+      var left = p.width
+      var calls = Seq(pc.translated(Position(ymax - pb, 0, 0)))
+      var i = 0
+      cs0.foreach(c => {
+        calls = calls :+ c._1.translated(Position(ymax - c._3, left, 0))
+        left = left + c._2.width
+        if (i != cs0.size - 1) {
+          calls = calls :+ sc.translated(Position(ymax - sb, left, 0))
+          left += s.width
+        }
+        i += 1
+      })
+      calls = calls :+ ec.translated(Position(ymax - eb, left, 0))
+      left += e.width
+      (DrawCall.Group(calls), Size(ymax + mymax, left), ymax)
+    } else {
+      var calls = Seq(pc)
+      var width = p.width
+      var top = p.height
+      cs0.foreach(c => {
+        calls = calls :+ c._1.translated(Position(top, Node.DefaultIndent, 0))
+        top += c._2.height
+        width = (Node.DefaultIndent + c._2.width) max width
+        // TODO add seperator
+      })
+      calls = calls :+ ec.translated(Position(top, 0, 0))
+      top += e.height
+      width = width max e.width
+      (DrawCall.Group(calls), Size(top, width), -1)
+    }
+  }
+
   sealed trait HaveChilds extends Node {
     protected val _childs = new mutable.ArrayBuffer[Node]()
 
@@ -102,7 +176,8 @@ object Node {
       s._parent = this
     }
 
-    protected def template: Template
+
+
   }
 
   class Structure(
@@ -111,11 +186,34 @@ object Node {
     def typ = language.types(tag.index)
     def childTypes = typ(index)
 
-    override val template: Template = typ match {
+    val template: Template = typ match {
       case record: Type.Record =>
         record.templateOrDefault
       case sum: Type.Sum =>
         sum.cases(index).templateOrDefault
+    }
+
+    def layout(template: Template, width: Int): LayoutRes = {
+      template match {
+        case Template.Field(i) =>
+          val c = childs(i)
+          c.layout(width)
+          (c.draw, c.size, c.baseline)
+        case Template.Tree(left, b1, content, sep, b2) =>
+          layoutComposite(left ++ b1,
+            content.map(a => layout(a, width - Node.DefaultIndent)),
+            sep.toSeq, b2.toSeq, width)
+        case Template.Literal(contents) =>
+          layoutLinear(contents)
+        case _ => logicError()
+      }
+    }
+
+    override def layout(width: Int): Unit = {
+      val res = layout(template, width)
+      _draw = res._1
+      size = res._2
+      baseline = res._3
     }
   }
 
@@ -128,14 +226,23 @@ object Node {
       _childs.size - 1
     }
 
-    override val template: Template = Template.Collection("[",  ",", "]")
+
+    override def layout(width: Int): Unit = {
+      val left = Seq(Linear.Delimiter("["))
+      val sep = Seq(Linear.Delimiter(","))
+      val end = Seq(Linear.Delimiter("]"))
+      childs.foreach(a => a.layout(width - Node.DefaultIndent))
+      val cs0 = childs.map(a => (a._draw, a.size, a.baseline))
+      val res = layoutComposite(left, cs0, sep, end, width)
+      _draw = res._1
+      size = res._2
+      baseline = res._3
+    }
   }
 
-  sealed trait Leaf extends Node {
+  sealed trait StringLeaf extends Node {
     override def childs: Seq[Node] = Seq.empty
-  }
 
-  sealed trait StringBuffered extends Node {
     protected var buffer = ""
     override def tryEdit(): Boolean = {
       buffer = ""
@@ -157,12 +264,19 @@ object Node {
       }
     }
 
+
+    override def layout(width: Int): Unit = {
+      val ts = TextStyle.reference.measure(buffer)
+      baseline = ts.y
+      size = Size(ts.y + ts.my, ts.w)
+      _draw = DrawCall.Text(Position(baseline, 0, 0), TextStyle.reference, buffer)
+    }
   }
 
   class Choice(
       override protected var _parent: Node,
       val language: Language, val tag: TypeTag.Ref
-  ) extends StringBuffered with Leaf {
+  ) extends StringLeaf {
     def typ = language.types(tag.index).asInstanceOf[Type.Sum]
 
     override def tryCommit(buffer: String): Boolean = {
@@ -183,7 +297,7 @@ object Node {
 
   class Str(
       override protected var _parent: Node
-  ) extends StringBuffered with Leaf {
+  ) extends StringLeaf {
     def init(str: String): Node = {
       buffer = str
       this

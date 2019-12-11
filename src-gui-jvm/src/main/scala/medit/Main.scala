@@ -40,7 +40,7 @@ object typefaces {
 
 class Impl() extends draw.Impl {
   override def measure(textStyle: TextStyle, str: draw.Str): TextMeasure = {
-    TextMeasure(0, textStyle.size * 1.5F.toInt, textStyle.size * str.size)
+    TextMeasure(0, textStyle.size * 1.4F, textStyle.size * str.size * 0.6F)
   }
 }
 
@@ -213,7 +213,7 @@ class Window {
         sk_canvas_draw_rect(canvas, r, paint)
       case DrawCall.Translated(position, calls) =>
         sk_canvas_save(canvas)
-        sk_canvas_translate(canvas, position.left, position.top)
+        sk_canvas_translate(canvas, position.left * dp, position.top * dp)
         calls.foreach(perform)
         sk_canvas_restore(canvas)
       case DrawCall.Group(calls) =>

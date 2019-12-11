@@ -68,23 +68,28 @@ sealed trait Type {
   }
 }
 
-sealed trait Template {
+sealed trait Linear
+object Linear {
+  case class Keyword(name: String) extends Linear
+  case class Delimiter(str: String) extends Linear
+  implicit val rw: RW[Linear] = RW.merge(macroRW[Keyword], macroRW[Delimiter])
 }
-object Template {
-  case class Keyword(name: String) extends Template
-  case class Collection(b1: String, sep: String, b2: String) extends Template
-  case class TightBrackets(left: Template, b1: String, content: Seq[Template], sep: String, b2: String) extends Template
-  case class Field(i: Int) extends Template
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Collection], macroRW[TightBrackets], macroRW[Field])
+sealed trait Template
+object Template {
+  case class Literal(content: Seq[Linear]) extends Template
+  case class Field(i: Int) extends Template
+  case class Tree(left: Seq[Linear], b1: Option[Linear], content: Seq[Template], sep: Option[Linear], b2: Option[Linear]) extends Template
+
+  implicit val rw: RW[Template] = RW.merge(macroRW[Literal], macroRW[Field], macroRW[Tree], macroRW[Field])
 
   def nameDefault(name: String, fields: Seq[NameTypeTag]): Template = {
-    TightBrackets(
-      Keyword(name),
-      "(",
+    Tree(
+      Seq(Linear.Keyword(name)),
+      Some(Linear.Delimiter("(")),
       fields.indices.map(f => Template.Field(f)),
-      ",",
-      ")"
+      Some(Linear.Delimiter(",")),
+      Some(Linear.Delimiter(")"))
     )
   }
 }
