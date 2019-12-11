@@ -10,7 +10,9 @@ sealed trait TypeTag {
     case TypeTag.Opt(tt) => tt.resolve(types)
     case TypeTag.Arr(tt) => tt.resolve(types)
     case TypeTag.Bag(tt) => tt.resolve(types)
-    case n@TypeTag.Ref(name) => n.index = types.indexWhere(_.name == name)
+    case n@TypeTag.Ref(name) =>
+      n.index = types.indexWhere(_.name == name)
+      assert(n.index != -1)
   }
   /** MEDIT_EXTRA_END **/
 }
@@ -91,6 +93,7 @@ sealed trait Template {
     case Template.Keyword(_) =>
     case f@Template.Field(name) =>
       f.index = fields.indexWhere(_.name == name)
+      assert(f.index != -1)
     case Template.Tree(left, b1, content, sep, b2) =>
       content.foreach(_.resolve(fields))
   }

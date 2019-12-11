@@ -97,17 +97,22 @@ object Node {
       }
     }
   }
+
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
     case TypeTag.Str => new Str(parent)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
-    case n: TypeTag.Ref => language.types(n.index) match {
-      case record: Type.Record =>
-        val s = new Structure(parent, language, n, -1)
-        s.init(record.fields.map(f => default(s, language, f.tag)))
-        s
-      case sum: Type.Sum =>
-        new Choice(parent, language, n)
-    }
+    case n: TypeTag.Ref =>
+      if (n.index == -1) {
+        logicError()
+      }
+      language.types(n.index) match {
+        case record: Type.Record =>
+          val s = new Structure(parent, language, n, -1)
+          s.init(record.fields.map(f => default(s, language, f.tag)))
+          s
+        case sum: Type.Sum =>
+          new Choice(parent, language, n)
+      }
   }
 
   def root(a: Language): Node = {
