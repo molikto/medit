@@ -57,7 +57,15 @@ more
 
 * non-tree layout like table or matrix
  
- ## other efforts
+## code
+
+firstly, the AST structure is defined using combinators `arr`, `opt`, `bag` and named record and sum types. actually, this language to define AST can define the language itself. and this is what we have done. see `Type.scala` for the AST in Scala code, and for meta definition see `langauge-meta.json`. being self-describable means if you want to define a new language, you can use the structural editor to edit the definition. this is like JetBrains MPS, where you define your language itself inside the structural editor.
+
+to bootstrap with minimal effort, we first view the editor as a tree editor, forgetting layout issues. after bootstrapping, we continue to add layout definitions.
+
+
+
+## other efforts
  
 * IntelliJ MPS
     * this is a structural editor framework, not a language framework, MPS's semantics part is not suited for developing serious general purpose languages from scratch, this project aims to provide an alternative to language implementors an alternative to parser and language server.

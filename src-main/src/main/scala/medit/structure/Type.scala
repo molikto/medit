@@ -129,21 +129,23 @@ object Template {
   @upickle.implicits.key("separator")
   case class Separator(str: String) extends Template
   @upickle.implicits.key("left_pad")
-  case class LeftPad(str: String) extends Template
+  case object LeftPad extends Template
   @upickle.implicits.key("right_pad")
-  case class RightPad(str: String) extends Template
+  case object RightPad extends Template
   @upickle.implicits.key("field")
   case class Field(name: String) extends Template {
     /** MEDIT_EXTRA_START **/
     var index = -1
     /** MEDIT_EXTRA_END **/
   }
+  case object Nil extends Template
   @upickle.implicits.key("unfold")
   case class Unfold(content: Template) extends Template
   @upickle.implicits.key("tree")
   case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad], macroRW[RightPad])
+
+  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad.type], macroRW[RightPad.type])
 
 }
 

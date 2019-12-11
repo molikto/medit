@@ -25,7 +25,7 @@
             }
           ],
           "template": [
-            
+
           ]
         },
         {
@@ -361,8 +361,7 @@
                   "str": "{"
                 },
                 {
-                  "$type": "right_pad",
-                  "str": " "
+                  "$type": "right_pad"
                 }
               ],
               "content": [
@@ -382,8 +381,7 @@
               ],
               "b2": [
                 {
-                  "$type": "left_pad",
-                  "str": " "
+                  "$type": "left_pad"
                 },
                 {
                   "$type": "delimiter",
@@ -488,12 +486,6 @@
         {
           "name": "right_pad",
           "fields": [
-            {
-              "name": "str",
-              "tag": {
-                "$type": "str"
-              }
-            }
           ],
           "template": [
             
@@ -502,12 +494,6 @@
         {
           "name": "left_pad",
           "fields": [
-            {
-              "name": "str",
-              "tag": {
-                "$type": "str"
-              }
-            }
           ],
           "template": [
             

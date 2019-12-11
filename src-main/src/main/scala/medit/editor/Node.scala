@@ -63,7 +63,7 @@ sealed trait Node {
 
 object Node {
 
-  val DefaultIndent = 8
+  val DefaultIndent = TextStyle.delimiters.unit * 2
 
   def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = {
     def fromFields(s: Structure, fields: Seq[NameTypeTag], obj: mutable.Map[String, ujson.Value]): Unit = {
@@ -208,8 +208,8 @@ object Node {
         left += e.width
         (DrawTemplate.Group(calls), Size(ymax + mymax, left), ymax)
       } else {
-        val (pc, p, _) = layoutLinear(left.reverse.dropWhile(_.isInstanceOf[RightPad]).reverse)
-        val (ec, e, _) = layoutLinear(end.dropWhile(_.isInstanceOf[LeftPad]))
+        val (pc, p, _) = layoutLinear(left.reverse.dropWhile(_ == RightPad).reverse)
+        val (ec, e, _) = layoutLinear(end.dropWhile(_ == LeftPad))
         var calls = Seq(pc)
         var width = p.width
         var top = p.height
@@ -239,10 +239,10 @@ object Node {
           val style = TextStyle.delimiters
           val unit = style.unit.w / 2
           layoutText(style, name, unit, unit)
-        case Template.RightPad(str) =>
-          layoutText(TextStyle.delimiters, str, 0F, 0F)
-        case Template.LeftPad(str) =>
-          layoutText(TextStyle.delimiters, str, 0F, 0F)
+        case Template.RightPad  =>
+          layoutText(TextStyle.delimiters, " ", 0F, 0F)
+        case Template.LeftPad  =>
+          layoutText(TextStyle.delimiters, " ", 0F, 0F)
         case Template.Delimiter(str) =>
           layoutText(TextStyle.delimiters, str, 0F, 0F)
         case f: Template.Field =>
