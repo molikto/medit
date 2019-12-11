@@ -9,4 +9,5 @@ object utils {
   class nullable extends Annotation
 
   def logicError() = throw new IllegalStateException()
+  def notUsed() = throw new IllegalStateException()
 }

@@ -1,6 +1,38 @@
 package medit.draw
 
+import medit.utils._
+
 case class Size(height: Float, width: Float)
+object Size {
+  val unit = Size(0, 0)
+
+  val sumHeight = new Numeric[Size] {
+    override def plus(x: Size, y: Size): Size = Size(x.height + y.height, x.width max y.width)
+    override def fromInt(x: Int): Size = Size(0, x)
+    override def minus(x: Size, y: Size): Size = notUsed()
+    override def times(x: Size, y: Size): Size = notUsed()
+    override def negate(x: Size): Size = notUsed()
+    override def parseString(str: String): Option[Size] = notUsed()
+    override def toInt(x: Size): Int = notUsed()
+    override def toLong(x: Size): Long = notUsed()
+    override def toFloat(x: Size): Float = notUsed()
+    override def toDouble(x: Size): Double = notUsed()
+    override def compare(x: Size, y: Size): Int = notUsed()
+  }
+  val sumWidth = new Numeric[Size] {
+    override def plus(x: Size, y: Size): Size = Size(x.height max y.height, x.width + y.width)
+    override def fromInt(x: Int): Size = Size(0, x)
+    override def minus(x: Size, y: Size): Size = notUsed()
+    override def times(x: Size, y: Size): Size = notUsed()
+    override def negate(x: Size): Size = notUsed()
+    override def parseString(str: String): Option[Size] = notUsed()
+    override def toInt(x: Size): Int = notUsed()
+    override def toLong(x: Size): Long = notUsed()
+    override def toFloat(x: Size): Float = notUsed()
+    override def toDouble(x: Size): Double = notUsed()
+    override def compare(x: Size, y: Size): Int = notUsed()
+  }
+}
 
 case class TextMeasure(my: Float, y: Float, w: Float) {
   def *(a: Int) = TextMeasure(my, y, w * a)
