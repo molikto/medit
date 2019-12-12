@@ -40,8 +40,8 @@ object typefaces {
 
 
 class Impl() extends draw.Impl {
-  override def measure(textStyle: TextStyle, str: draw.Str): TextMeasure = {
-    TextMeasure(textStyle.size * 0.35F, textStyle.size * 1.05F, textStyle.size * str.size * 0.6F)
+  override def measure(textStyle: TextStyle, str: String): TextMeasure = {
+    TextMeasure(textStyle.size * str.size * 0.6F, textStyle.size * 0.35F, textStyle.size * 1.05F)
   }
 }
 
@@ -68,6 +68,9 @@ class Window {
     println(s"dp is $dp")
   }
   var dp: Float = 1
+  // TODO did they need to be initialized?
+  var xpos: Double = 0
+  var ypos: Double = 0
 
   var gr_context: gr_context_t = null
   var gr_ffi: gr_gl_framebufferinfo_t = null
@@ -90,12 +93,6 @@ class Window {
   glfwWindowHint(GLFW_DEPTH_BITS, 0)
   window = glfwCreateWindow(windowSize._1, windowSize._2, "medit", NULL, NULL)
   if (window == NULL) throw new RuntimeException("Failed to create the GLFW window")
-  glfwSetCharModsCallback(window, (window: Long, codepoint: Int, mods: Int) => {
-    editor.onChar(codepoint, mods)
-  })
-  glfwSetKeyCallback(window, (window: Long, key: Int, scancode: Int, action: Int, mods: Int) => {
-    editor.onKey(key, mods)
-  })
   // Get the thread stack and push a new frame
   val stack = stackPush
   try {
@@ -113,12 +110,12 @@ class Window {
   } finally {
     if (stack != null) stack.close()
   }
-  glfwSetWindowSizeCallback(window, (window, width, height) => {
+  glfwSetWindowSizeCallback(window, (_, width, height) => {
     windowSize = (width, height)
     debug(s"window size changed $windowSize")
     calculateDp()
   })
-  glfwSetFramebufferSizeCallback(window, (window, width, height) => {
+  glfwSetFramebufferSizeCallback(window, (_, width, height) => {
     frameBufferSize = (width, height)
     debug(s"frame buffer size changed $frameBufferSize")
     calculateDp()
@@ -128,6 +125,24 @@ class Window {
     destroySurface()
     createSurface()
     render()
+  })
+  // https://www.glfw.org/docs/latest/input_guide.html
+  glfwSetCursorPosCallback(window, (_, x, y) =>{
+    xpos = x
+    ypos = y
+  })
+  glfwSetCharModsCallback(window, (window: Long, codepoint: Int, mods: Int) => {
+    editor.onChar(codepoint, mods)
+  })
+  glfwSetKeyCallback(window, (window: Long, key: Int, scancode: Int, action: Int, mods: Int) => {
+    editor.onKey(key, mods)
+  })
+  glfwSetMouseButtonCallback(window, (_: Long, button: Int, action: Int, mods: Int) => {
+    editor.onMouse(button, action, mods, xpos, ypos)
+  })
+  // TODO scrolling is not frame synced?
+  glfwSetScrollCallback(window, (_: Long, xoffset: Double, yoffset: Double) => {
+    editor.onScroll(xoffset, yoffset)
   })
   // TODO resizing window will cause drawing to turn black
   glfwMakeContextCurrent(window)
@@ -185,7 +200,8 @@ class Window {
     render()
     gr_context_flush(gr_context)
     glfwSwapBuffers(window)
-    glfwPollEvents()
+    glfwWaitEvents()
+    // glfwPollEvents()
   }
   destroySurface()
   gr_context_release_resources_and_abandon_context(gr_context)
@@ -230,8 +246,15 @@ class Window {
     }
   }
 
+  var lastFrameTime = 0L
+
   def render(): Unit = {
-    perform(editor.render(windowSize._1))
+    val start = System.currentTimeMillis()
+    perform(editor.render(windowSize._1, windowSize._2))
+    lastFrameTime = System.currentTimeMillis() - start
+    val str = lastFrameTime.toString
+    val measure = TextStyle.delimiters.measure(str)
+    perform(DrawCall.Text(Position(measure.y, windowSize._1 - measure.w, 0), TextStyle.delimiters, str))
   }
 
   def renderTest() = {

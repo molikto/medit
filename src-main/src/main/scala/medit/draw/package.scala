@@ -1,13 +1,9 @@
 package medit
 
 package object draw {
-  type Str = String
-
-
-
 
   trait Impl {
-    def measure(textStyle: TextStyle, str: Str): TextMeasure
+    def measure(textStyle: TextStyle, str: String): TextMeasure
   }
   var impl: Impl = null
 }

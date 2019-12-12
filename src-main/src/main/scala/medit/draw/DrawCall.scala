@@ -2,13 +2,13 @@ package medit.draw
 
 import medit.utils._
 
-case class Size(height: Float, width: Float)
+case class Size(width: Float, height: Float)
 object Size {
   val unit = Size(0, 0)
 
   val sumHeight = new Numeric[Size] {
-    override def plus(x: Size, y: Size): Size = Size(x.height + y.height, x.width max y.width)
-    override def fromInt(x: Int): Size = Size(0, x)
+    override def plus(x: Size, y: Size): Size = Size(x.width max y.width, x.height + y.height)
+    override def fromInt(x: Int): Size = Size(x, 0)
     override def minus(x: Size, y: Size): Size = notUsed()
     override def times(x: Size, y: Size): Size = notUsed()
     override def negate(x: Size): Size = notUsed()
@@ -20,8 +20,8 @@ object Size {
     override def compare(x: Size, y: Size): Int = notUsed()
   }
   val sumWidth = new Numeric[Size] {
-    override def plus(x: Size, y: Size): Size = Size(x.height max y.height, x.width + y.width)
-    override def fromInt(x: Int): Size = Size(0, x)
+    override def plus(x: Size, y: Size): Size = Size(x.width + y.width, x.height max y.height)
+    override def fromInt(x: Int): Size = Size(x, 0)
     override def minus(x: Size, y: Size): Size = notUsed()
     override def times(x: Size, y: Size): Size = notUsed()
     override def negate(x: Size): Size = notUsed()
@@ -34,20 +34,24 @@ object Size {
   }
 }
 
-case class TextMeasure(my: Float, y: Float, w: Float) {
-  def *(a: Int) = TextMeasure(my, y, w * a)
-  def +(y: TextMeasure): TextMeasure = TextMeasure(my max y.my, this.y max y.y, w + y.w)
+case class TextMeasure(w: Float, my: Float, y: Float) {
+  def *(a: Int) = TextMeasure(w * a, my, y)
+  def +(y: TextMeasure): TextMeasure = TextMeasure(w + y.w, my max y.my, this.y max y.y)
 }
 
-case class Position(top: Float, left: Float, depth: Int) {
-  def +(p: Position) = Position(top + p.top, left + p.left, depth + p.depth)
+case class Position(left: Float, top: Float, depth: Int) {
+  def +(p: Position) = Position(left + p.left, top + p.top, depth + p.depth)
 }
 
 object Position {
   val unit = Position(0, 0, 0)
 }
-case class Rect(top: Float, left: Float, height: Float, width: Float) {
-  def +(p: Position) = Rect(top + p.top, left + p.left, height, width)
+case class Rect(left: Float, top: Float, height: Float, width: Float) {
+  def contains(xpos: Float, ypos: Float): Boolean = {
+    xpos >= left && xpos <= left + width && ypos >= top && ypos <= top + height
+  }
+
+  def +(p: Position) = Rect(left + p.left, top + p.top, height, width)
 }
 
 sealed trait Typeface
@@ -56,7 +60,7 @@ object Typeface {
 }
 
 case class TextStyle(color: Int, typeface: Typeface, size: Int) {
-  def measure(text: Str) = impl.measure(this, text)
+  def measure(text: String) = impl.measure(this, text)
   lazy val unit = measure(" ")
 }
 
@@ -89,7 +93,7 @@ sealed trait DrawCall {
 }
 
 object DrawCall {
-  case class Text(position: Position, style: TextStyle, text: Str) extends DrawCall
+  case class Text(position: Position, style: TextStyle, text: String) extends DrawCall
   case class Rect(rect: medit.draw.Rect, style: ShapeStyle) extends DrawCall
   case class Translated(position: Position, calls: Seq[DrawCall]) extends DrawCall
   case class Group(calls: Seq[DrawCall]) extends DrawCall

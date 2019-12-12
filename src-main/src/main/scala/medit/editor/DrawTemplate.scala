@@ -1,6 +1,6 @@
 package medit.editor
 
-import medit.draw.{Position, Size}
+import medit.draw.{DrawCall, Position, Size}
 
 
 sealed trait DrawTemplate {

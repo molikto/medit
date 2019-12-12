@@ -33,6 +33,7 @@ what users need? (in order of implementation!)
         * navigation
         * selection
         * find replace
+            * regular expressions
         * diff merge
         * copy paste
     * auto complete and tooltips
@@ -40,20 +41,17 @@ what users need? (in order of implementation!)
         * is this the only match?
         * sort matches by typechecking
         * ...
-    * devices
-        * mouse
-        * keyboard
     * modes
         * non-modal
         * modal
     * models
         * text
         * tree
-* concrete -─ what MPS calls "structure"
-    * generating layout
+    * undo redo
 * GUI
-   * file tree
-   * mini-map
+    * tabs
+    * file tree
+    * mini-map
    
 more
 
@@ -78,6 +76,7 @@ to bootstrap with minimal effort, we first view the editor as a tree editor, for
     * but why the editor has so much animation? it is a distraction
 * Hazel
     * this is too strict with semantics
+* TeXmacs
 
 
 

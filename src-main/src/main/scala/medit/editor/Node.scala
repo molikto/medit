@@ -36,12 +36,24 @@ sealed trait Node {
   def multiline = baseline < 0
   protected var size: Size = null
 
-  def rect = Rect(top, left, size.height, size.width)
+  def rect = Rect(left, top, size.height, size.width)
+
+  def findAt(xpos: Float, ypos: Float): Option[Seq[Int]] = {
+    if (xpos >= 0 && xpos <= size.width && ypos >= 0 && ypos <= size.height) {
+      val res = childs.map(c => c.findAt(xpos - c.left, ypos - c.top))
+          .zipWithIndex.find(_._1.nonEmpty).map(a => a._2 +: a._1.get).getOrElse(Seq.empty)
+      Some(res)
+    } else {
+      None
+    }
+  }
+
+
   def rect(focus: Seq[Int]): Rect = {
     if (focus.isEmpty) {
       rect
     } else {
-      childs(focus.head).rect(focus.tail) + Position(top, left, 0)
+      childs(focus.head).rect(focus.tail) + Position(left, top, 0)
     }
   }
 
@@ -179,10 +191,10 @@ object Node {
         val my = res.map(a => a._2.height - a._3).max
         var width = 0F
         res.foreach({ l =>
-          calls = calls :+ l._1.translated(Position(y  - l._3, width, 0))
+          calls = calls :+ l._1.translated(Position(width, y  - l._3, 0))
           width += l._2.width
         })
-        (DrawTemplate.Group(calls), Size(y + my, width), y)
+        (DrawTemplate.Group(calls), Size(width, y + my), y)
       }
     }
 
@@ -199,20 +211,20 @@ object Node {
           mymax = (a._2.height - a._3) max mymax
         })
         var left = p.width
-        var calls = Seq(pc.translated(Position(ymax - pb, 0, 0)))
+        var calls = Seq(pc.translated(Position(0, ymax - pb, 0)))
         var i = 0
         cs0.foreach(c => {
-          calls = calls :+ c._1.translated(Position(ymax - c._3, left, 0))
+          calls = calls :+ c._1.translated(Position(left, ymax - c._3, 0))
           left = left + c._2.width
           if (i != cs0.size - 1) {
-            calls = calls :+ sc.translated(Position(ymax - sb, left, 0))
+            calls = calls :+ sc.translated(Position(left, ymax - sb, 0))
             left += s.width
           }
           i += 1
         })
-        calls = calls :+ ec.translated(Position(ymax - eb, left, 0))
+        calls = calls :+ ec.translated(Position(left, ymax - eb, 0))
         left += e.width
-        (DrawTemplate.Group(calls), Size(ymax + mymax, left), ymax)
+        (DrawTemplate.Group(calls), Size(left, ymax + mymax), ymax)
       } else {
         val (pc, p, _) = layoutLinear(left.reverse.dropWhile(_ == RightPad).reverse)
         val (ec, e, _) = layoutLinear(end.dropWhile(_ == LeftPad))
@@ -220,21 +232,21 @@ object Node {
         var width = p.width
         var top = p.height
         cs0.foreach(c => {
-          calls = calls :+ c._1.translated(Position(top, Node.DefaultIndent, 0))
+          calls = calls :+ c._1.translated(Position(Node.DefaultIndent, top, 0))
           top += c._2.height
           width = (Node.DefaultIndent + c._2.width) max width
           // FIXME add seperator
         })
-        calls = calls :+ ec.translated(Position(top, 0, 0))
+        calls = calls :+ ec.translated(Position(0, top, 0))
         top += e.height
         width = width max e.width
-        (DrawTemplate.Group(calls), Size(top, width), -1)
+        (DrawTemplate.Group(calls), Size(width, top), -1)
       }
     }
 
     def layoutText(style: TextStyle, name: String, leftPad: Float, rightPad: Float) = {
       val measure = style.measure(name)
-      (DrawTemplate.Just(DrawCall.Text(Position(measure.y, leftPad, 0), style, name)), Size(measure.y + measure.my, measure.w + leftPad + rightPad), measure.y)
+      (DrawTemplate.Just(DrawCall.Text(Position(leftPad, measure.y, 0), style, name)), Size(measure.w + leftPad + rightPad, measure.y + measure.my), measure.y)
     }
 
     def layout(left: Template, width: Float, forceLinear: Boolean): LayoutRes = {
@@ -381,8 +393,8 @@ object Node {
       val str = if (buffer.isEmpty) "?" else buffer
       val ts = style.measure(str)
       baseline = ts.y
-      size = Size(ts.y + ts.my, ts.w)
-      _draw = DrawTemplate.Just(DrawCall.Text(Position(baseline, 0, 0), style, str))
+      size = Size(ts.w, ts.y + ts.my)
+      _draw = DrawTemplate.Just(DrawCall.Text(Position(0, baseline, 0), style, str))
     }
   }
 
