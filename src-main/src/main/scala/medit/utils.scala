@@ -21,4 +21,6 @@ object utils {
     pw.write(a.render(2))
     pw.close()
   }
+
+  def unique[T](a: Seq[T]): Boolean = a.toSet.size == a.size
 }

@@ -1,24 +1,32 @@
 package medit.structure
 
+import medit.utils
 import upickle.default.{macroRW, ReadWriter => RW}
+
+import scala.collection.mutable
 
 sealed trait StructureException extends Exception
 object StructureException {
   case class UnfoldNotSupported() extends StructureException
   case class CannotUnfold() extends StructureException
+  case class UnknownField() extends StructureException
+  case class DuplicateFieldInTemplate() extends StructureException
+  case class DuplicateName() extends StructureException
+
+  case class UnknownReference() extends StructureException
 }
 
 
 sealed trait TypeTag {
   /** MEDIT_EXTRA_START **/
-  def resolve(types: Seq[Type]): Unit = this match {
+  def check(types: Seq[Type]): Unit = this match {
     case TypeTag.Str =>
-    case TypeTag.Opt(tt) => tt.resolve(types)
-    case TypeTag.Arr(tt) => tt.resolve(types)
-    case TypeTag.Bag(tt) => tt.resolve(types)
+    case TypeTag.Opt(tt) => tt.check(types)
+    case TypeTag.Arr(tt) => tt.check(types)
+    case TypeTag.Bag(tt) => tt.check(types)
     case n@TypeTag.Ref(name) =>
       n.index = types.indexWhere(_.name == name)
-      assert(n.index != -1)
+      if (n.index == -1) throw StructureException.UnknownReference()
   }
   /** MEDIT_EXTRA_END **/
 }
@@ -77,16 +85,19 @@ sealed trait Type {
   }
 
   def name: String
-  def resolve(types: Seq[Type]) = this match {
+  def check(types: Seq[Type]) = this match {
     case record: Type.Record =>
-      record.fields.foreach(_.tag.resolve(types))
-      record.template.foreach(_.resolve(record.fields))
-      record.defaultTemplate.resolve(record.fields)
+      if (!utils.unique(record.fields.map(_.name))) throw StructureException.DuplicateName()
+      record.fields.foreach(_.tag.check(types))
+      record.template.foreach(_.check(record.fields))
+      record.defaultTemplate.check(record.fields)
     case sum: Type.Sum =>
+      if (!utils.unique(sum.cases.map(_.name))) throw StructureException.DuplicateName()
       sum.cases.foreach(a => {
-        a.fields.foreach(_.tag.resolve(types))
-        a.template.foreach(_.resolve(a.fields))
-        a.defaultTemplate.resolve(a.fields)
+        if (!utils.unique(a.fields.map(_.name))) throw StructureException.DuplicateName()
+        a.fields.foreach(_.tag.check(types))
+        a.template.foreach(_.check(a.fields))
+        a.defaultTemplate.check(a.fields)
       })
   }
   /** MEDIT_EXTRA_END **/
@@ -94,32 +105,40 @@ sealed trait Type {
 
 sealed trait Template {
   /** MEDIT_EXTRA_START **/
-  def resolve(fields: Seq[NameTypeTag], allowUnfold: Boolean = false): Unit = this match {
-    case f: Template.FieldRef =>
-      f match {
-        case Template.Unfold(_) =>
-          if (!allowUnfold) throw StructureException.UnfoldNotSupported()
-        case _ =>
-      }
-      f.index = fields.indexWhere(_.name == f.name)
-      assert(f.index != -1)
-    case Template.Tree(left, b1, content, sep, b2) =>
-      content match {
-        case Seq(f@Template.Unfold(_)) =>
-          f.resolve(fields, true)
-          fields(f.index).tag match {
-            case coll: TypeTag.Coll =>
+  def check(fields: Seq[NameTypeTag]): Unit = {
+    val remaining = mutable.Set.from(fields.map(_.name))
+    def rec(t: Template, allowUnfold: Boolean = false): Unit = {
+      this match {
+        case f: Template.FieldRef =>
+          f match {
+            case Template.Unfold(_) =>
+              if (!allowUnfold) throw StructureException.UnfoldNotSupported()
             case _ =>
-              throw StructureException.CannotUnfold()
           }
+          f.index = fields.indexWhere(_.name == f.name)
+          if (f.index == -1) throw StructureException.UnknownField()
+          if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
+          remaining.remove(f.name)
+        case Template.Tree(left, b1, content, sep, b2) =>
+          content match {
+            case Seq(f@Template.Unfold(_)) =>
+              rec(f, true)
+              fields(f.index).tag match {
+                case coll: TypeTag.Coll =>
+                case _ =>
+                  throw StructureException.CannotUnfold()
+              }
+            case _ =>
+              content.foreach(a => rec(a))
+          }
+          left.foreach(a => rec(a))
+          b1.foreach(a => rec(a))
+          sep.foreach(a => rec(a))
+          b2.foreach(a => rec(a))
         case _ =>
-          content.foreach(_.resolve(fields))
       }
-      left.foreach(_.resolve(fields))
-      b1.foreach(_.resolve(fields))
-      sep.foreach(_.resolve(fields))
-      b2.foreach(_.resolve(fields))
-    case _ =>
+    }
+    rec(this)
   }
   /** MEDIT_EXTRA_END **/
 }
@@ -182,8 +201,9 @@ object Type {
 
 case class Language(types: Seq[Type], root: TypeTag) {
   /** MEDIT_EXTRA_START **/
-  types.foreach(_.resolve(types))
-  root.resolve(types)
+  if (!utils.unique(types.map(_.name))) throw StructureException.DuplicateName()
+  types.foreach(_.check(types))
+  root.check(types)
   /** MEDIT_EXTRA_END **/
 }
 
