@@ -397,7 +397,7 @@ object Node {
 
     def typ = dependentCast[Type.Sum](language.types(tag.index))
 
-    override def save(): Value = ujson.Obj.from(Seq(("$chioce", buffer)))
+    override def save(): Value = ujson.Obj.from(Seq(("$choice", buffer)))
 
     override def tryCommit(buffer: String): Boolean = {
       typ.cases.indexWhere(_.name == buffer) match {

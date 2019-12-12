@@ -160,6 +160,7 @@ object Template {
   case class Field(name: String) extends FieldRef
   @upickle.implicits.key("unfold")
   case class Unfold(name: String) extends FieldRef
+  //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
   case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
 
