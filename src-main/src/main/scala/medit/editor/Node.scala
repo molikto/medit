@@ -259,7 +259,7 @@ object Node {
           logicError()
         case Template.Tree(left, b1, content, sep, b2) =>
           content match {
-            case Seq(Template.Unfold(f@Template.Field(_))) =>
+            case Seq(f@Template.Unfold(_)) =>
               val c = dependentCast[Collection](childs(f.index))
               val cs = c.layoutChilds(width - Node.DefaultIndent, forceLinear, f.index)
               val res = layoutComposite(left ++ b1, cs, sep.toSeq, b2, width, forceLinear)

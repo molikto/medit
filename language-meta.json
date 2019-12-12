@@ -367,10 +367,7 @@
               "content": [
                 {
                   "$type": "unfold",
-                  "content": {
-                    "$type": "field",
-                    "name": "cases"
-                  }
+                  "name": "cases"
                 }
               ],
               "sep": [
@@ -531,10 +528,9 @@
           "name": "unfold",
           "fields": [
             {
-              "name": "content",
+              "name": "name",
               "tag": {
-                "$type": "ref",
-                "name": "template"
+                "$type": "str"
               }
             }
           ],
