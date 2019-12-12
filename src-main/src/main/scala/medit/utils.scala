@@ -8,6 +8,7 @@ object utils {
 
   class nullable extends Annotation
 
+  @inline def dependentCast[T](a: Any) = a.asInstanceOf[T]
   def logicError() = throw new IllegalStateException()
-  def notUsed() = throw new IllegalStateException()
+  @inline def notUsed() = throw new IllegalStateException()
 }

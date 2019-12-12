@@ -2,6 +2,12 @@ package medit.structure
 
 import upickle.default.{macroRW, ReadWriter => RW}
 
+sealed trait StructureException extends Exception
+object StructureException {
+  case class UnfoldNotSupported() extends StructureException
+  case class CannotUnfold() extends StructureException
+}
+
 
 sealed trait TypeTag {
   /** MEDIT_EXTRA_START **/
@@ -93,13 +99,23 @@ sealed trait Template {
       f.index = fields.indexWhere(_.name == name)
       assert(f.index != -1)
     case Template.Tree(left, b1, content, sep, b2) =>
+      content match {
+        case Seq(Template.Unfold(f@Template.Field(_))) =>
+          f.resolve(fields)
+          fields(f.index).tag match {
+            case coll: TypeTag.Coll =>
+            case _ =>
+              throw StructureException.CannotUnfold()
+          }
+        case _ =>
+          content.foreach(_.resolve(fields))
+      }
       left.foreach(_.resolve(fields))
       b1.foreach(_.resolve(fields))
       sep.foreach(_.resolve(fields))
       b2.foreach(_.resolve(fields))
-      content.foreach(_.resolve(fields))
     case Template.Unfold(content) =>
-      content.resolve(fields)
+      throw StructureException.UnfoldNotSupported()
     case _ =>
   }
   /** MEDIT_EXTRA_END **/
