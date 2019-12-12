@@ -6,7 +6,7 @@
  
 ## build & run
 
-standard SBT project `sbt main/compile`, `sbt main/run`, you need `-XstartOnFirstThread` JVM option on macOS.
+standard SBT project `sbt gui-jvm/compile`, `sbt gui-jvm/run`, you need `-XstartOnFirstThread` JVM option on macOS.
 
 ## architecture
  
@@ -65,7 +65,7 @@ firstly, the AST structure is defined using combinators `arr`, `opt`, `bag` and 
 
 to bootstrap with minimal effort, we first view the editor as a tree editor, forgetting layout issues. after bootstrapping, we continue to add layout definitions.
 
-
+`Node` is a tree where each node has a type of structured which is a instance of named structure syntax, or collection, which is for combinator types`arr`, `opt` etc
 
 ## other efforts
  

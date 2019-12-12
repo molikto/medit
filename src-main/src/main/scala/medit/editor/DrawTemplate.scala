@@ -15,6 +15,7 @@ sealed trait DrawTemplate {
 }
 object DrawTemplate {
   case class Child(i: Int) extends DrawTemplate
+  case class ChildChild(i: Int, j: Int) extends DrawTemplate
   case class Translated(position: Position, temps: Seq[DrawTemplate]) extends DrawTemplate
   case class Group(temps: Seq[DrawTemplate]) extends DrawTemplate
   case class Just(call: medit.draw.DrawCall) extends DrawTemplate

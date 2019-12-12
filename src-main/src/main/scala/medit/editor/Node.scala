@@ -49,6 +49,7 @@ sealed trait Node {
   def layout(width: Float, forceLinear: Boolean): Unit
 
   def flatten(_draw: DrawTemplate): DrawCall = _draw match {
+    case DrawTemplate.ChildChild(i, j) => childs(i).childs(j).draw
     case DrawTemplate.Child(i) => childs(i).draw
     case DrawTemplate.Translated(position, temps) =>
       DrawCall.Translated(position, temps.map(flatten))
@@ -154,6 +155,11 @@ object Node {
         val c = childs(i)
         c.left = position.left
         c.top = position.top
+      case DrawTemplate.ChildChild(i, j) =>
+        // a unfolded child will have the same size as parent
+        val c = childs(i).childs(j)
+        c.left = position.left
+        c.top = position.top
       case DrawTemplate.Group(temps) =>
         temps.foreach(a => resolveChildPositions(a, position))
       case DrawTemplate.Translated(pos, temps) =>
@@ -250,19 +256,23 @@ object Node {
           c.layout(width, forceLinear)
           (DrawTemplate.Child(f.index), c.size, c.baseline)
         case Template.Unfold(c) =>
-          layout(c, width, forceLinear) // FIXME unfold handling is bad
+          logicError()
         case Template.Tree(left, b1, content, sep, b2) =>
-          val cons = content match {
-            case Seq(Template.Unfold(f@Template.Field(_))) =>
-              val c = childs(f.index)
-              c.asInstanceOf[Collection].layout(cs => layoutComposite(Seq.empty, cs, sep.toSeq, Seq.empty, width, forceLinear), width, forceLinear)
-              Seq((DrawTemplate.Child(f.index), c.size, c.baseline))
+          content match {
+            case Seq(f@Template.Unfold(_)) =>
+              val c = dependentCast[Collection](childs(f.index))
+              val cs = c.layoutChilds(width - Node.DefaultIndent, forceLinear, f.index)
+              val res = layoutComposite(left ++ b1, cs, sep.toSeq, b2, width, forceLinear)
+              c._draw = DrawTemplate.Group(Seq.empty)
+              c.size = res._2
+              c.baseline = res._3
+              res
             case _ =>
-              content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
+              val cons = content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
+              layoutComposite(left ++ b1,
+                cons,
+                sep.toSeq, b2, width, forceLinear)
           }
-          layoutComposite(left ++ b1,
-            cons,
-            sep.toSeq, b2, width, forceLinear)
       }
     }
   }
@@ -274,7 +284,7 @@ object Node {
     def childTypes = typ(index)
     override def save(): Value = {
       val cs = childs.zip(childTypes).map(p => (p._2.name, p._1.save()))
-      val cs0 = if (index == -1) cs else Seq(("$type", ujson.Str(typ.asInstanceOf[Type.Sum].cases(index).name))) ++ cs
+      val cs0 = if (index == -1) cs else Seq(("$type", ujson.Str(dependentCast[Type.Sum](typ).cases(index).name))) ++ cs
       ujson.Obj.from(cs0)
     }
 
@@ -309,7 +319,7 @@ object Node {
 
     override def tryDelete(last: Int): Boolean = {
       if (last < childs.size) {
-        _childs.remove(last)
+        _childs.remove(last)._parent = null
         true
       } else {
         false
@@ -320,24 +330,23 @@ object Node {
       ujson.Arr.from(childs.map(_.save()))
     }
 
-    def layout(mapper: Seq[LayoutRes] => LayoutRes, width: Float, forceLinear: Boolean): Unit = {
-      val cs0 = childs.zipWithIndex.map(a => {
+    def layoutChilds(width: Float, forceLinear: Boolean, childChild: Int = -1): Seq[LayoutRes] = {
+      childs.zipWithIndex.map(a => {
         val res = a._1.layout(width, forceLinear)
-        (DrawTemplate.Child(a._2), a._1.size, a._1.baseline)
+        (if (childChild == -1) DrawTemplate.Child(a._2) else DrawTemplate.ChildChild(childChild, a._2), a._1.size, a._1.baseline)
       })
-      val res = mapper(cs0)
-      resolveChildPositions(res._1)
-      _draw = res._1
-      size = res._2
-      baseline = res._3
     }
 
     override def layout(width: Float, forceLinear: Boolean): Unit = {
       val left = Seq(Template.Delimiter("["))
       val sep = Seq(Template.Separator(","))
       val end = Seq(Template.Delimiter("]"))
-      layout(cs =>
-        layoutComposite(left, cs, sep, end, width, forceLinear), width - Node.DefaultIndent, forceLinear)
+      val cs = layoutChilds(width - Node.DefaultIndent, forceLinear)
+      val res = layoutComposite(left, cs, sep, end, width, forceLinear)
+      resolveChildPositions(res._1)
+      _draw = res._1
+      size = res._2
+      baseline = res._3
     }
   }
 
@@ -386,9 +395,9 @@ object Node {
       this
     }
 
-    def typ = language.types(tag.index).asInstanceOf[Type.Sum]
+    def typ = dependentCast[Type.Sum](language.types(tag.index))
 
-    override def save(): Value = ujson.Obj.from(Seq(("$chioce", buffer)))
+    override def save(): Value = ujson.Obj.from(Seq(("$choice", buffer)))
 
     override def tryCommit(buffer: String): Boolean = {
       typ.cases.indexWhere(_.name == buffer) match {

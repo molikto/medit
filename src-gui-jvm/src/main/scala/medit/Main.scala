@@ -10,6 +10,7 @@ import java.nio._
 
 import medit.draw.{DrawCall, Position, TextMeasure, TextStyle, Typeface}
 import medit.editor.Editor
+import medit.structure.Language
 import org.lwjgl.glfw.Callbacks._
 import org.lwjgl.glfw.GLFW._
 import org.lwjgl.opengl.GL30._
@@ -170,8 +171,15 @@ class Window {
   medit.draw.impl = new Impl()
   paints = new Paints()
   shapes = new Shapes()
-  val lang = structure.MetaLanguage
-  editor = new Editor(lang.language, lang.json, a => lang.save(a))
+
+  editor = new Editor(
+    Language.parse(utils.read("language-meta.json")),
+    ujson.read(utils.read("language-meta.json")),
+    a => utils.save(a, "language-meta.json"))
+//  editor = new Editor(
+//    Language.parse(utils.read("language-meta.json")),
+//    ujson.read(utils.read("language-mlang.json")),
+//    a => utils.save(a, "language-mlang.json"))
   while (!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     render()

@@ -1,0 +1,11 @@
+{
+  "types": [
+    {
+      "$choice": ""
+    }
+  ],
+  "root": {
+    "$type": "ref",
+    "name": "language"
+  }
+}

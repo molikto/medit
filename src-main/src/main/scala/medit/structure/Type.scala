@@ -2,6 +2,12 @@ package medit.structure
 
 import upickle.default.{macroRW, ReadWriter => RW}
 
+sealed trait StructureException extends Exception
+object StructureException {
+  case class UnfoldNotSupported() extends StructureException
+  case class CannotUnfold() extends StructureException
+}
+
 
 sealed trait TypeTag {
   /** MEDIT_EXTRA_START **/
@@ -88,18 +94,31 @@ sealed trait Type {
 
 sealed trait Template {
   /** MEDIT_EXTRA_START **/
-  def resolve(fields: Seq[NameTypeTag]): Unit = this match {
-    case f@Template.Field(name) =>
-      f.index = fields.indexWhere(_.name == name)
+  def resolve(fields: Seq[NameTypeTag], allowUnfold: Boolean = false): Unit = this match {
+    case f: Template.FieldRef =>
+      f match {
+        case Template.Unfold(_) =>
+          if (!allowUnfold) throw StructureException.UnfoldNotSupported()
+        case _ =>
+      }
+      f.index = fields.indexWhere(_.name == f.name)
       assert(f.index != -1)
     case Template.Tree(left, b1, content, sep, b2) =>
+      content match {
+        case Seq(f@Template.Unfold(_)) =>
+          f.resolve(fields, true)
+          fields(f.index).tag match {
+            case coll: TypeTag.Coll =>
+            case _ =>
+              throw StructureException.CannotUnfold()
+          }
+        case _ =>
+          content.foreach(_.resolve(fields))
+      }
       left.foreach(_.resolve(fields))
       b1.foreach(_.resolve(fields))
       sep.foreach(_.resolve(fields))
       b2.foreach(_.resolve(fields))
-      content.foreach(_.resolve(fields))
-    case Template.Unfold(content) =>
-      content.resolve(fields)
     case _ =>
   }
   /** MEDIT_EXTRA_END **/
@@ -120,6 +139,10 @@ object Template {
       )
     }
   }
+  sealed trait FieldRef extends Template {
+    val name: String
+    var index = -1
+  }
   /** MEDIT_EXTRA_END **/
 
   @upickle.implicits.key("keyword")
@@ -132,14 +155,12 @@ object Template {
   case object LeftPad extends Template
   @upickle.implicits.key("right_pad")
   case object RightPad extends Template
+
   @upickle.implicits.key("field")
-  case class Field(name: String) extends Template {
-    /** MEDIT_EXTRA_START **/
-    var index = -1
-    /** MEDIT_EXTRA_END **/
-  }
+  case class Field(name: String) extends FieldRef
   @upickle.implicits.key("unfold")
-  case class Unfold(content: Template) extends Template
+  case class Unfold(name: String) extends FieldRef
+  //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
   case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
 
