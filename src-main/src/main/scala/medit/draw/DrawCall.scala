@@ -62,9 +62,9 @@ case class TextStyle(color: Int, typeface: Typeface, size: Int) {
 
 
 object TextStyle {
-  val keyword = TextStyle(0xFFFFFFAA, Typeface.Mono, 13)
-  val reference = TextStyle(0xFFFFFFFF, Typeface.Mono, 13)
-  val delimiters = TextStyle(0xFFAAAAAA, Typeface.Mono, 13)
+  val keyword = TextStyle(0xFFCC7832, Typeface.Mono, 13)
+  val reference = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
+  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 13)
   val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)
 }
 
@@ -72,7 +72,7 @@ object TextStyle {
 case class ShapeStyle(color: Int)
 
 object ShapeStyle {
-  val cursor : ShapeStyle = ShapeStyle(0xFF003300)
+  val cursor : ShapeStyle = ShapeStyle(0x99214283)
   val error: ShapeStyle = ShapeStyle(0xFFAA0000)
 }
 

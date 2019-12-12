@@ -237,7 +237,7 @@ object Node {
           layoutText(TextStyle.keyword, name, 0F, 0F)
         case Template.Separator(name) =>
           val style = TextStyle.delimiters
-          val unit = style.unit.w / 2
+          val unit = style.unit.w / 3
           layoutText(style, name, unit, unit)
         case Template.RightPad  =>
           layoutText(TextStyle.delimiters, " ", 0F, 0F)
