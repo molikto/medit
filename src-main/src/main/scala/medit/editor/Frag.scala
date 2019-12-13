@@ -36,19 +36,20 @@ sealed trait Frag {
     }
   }
 
-  def rect(index: Int): Rect = {
+  def get(index: Int): (LineFrag.Text, Rect) = {
     this match {
       case frag: LineFrag.Text =>
-        if (index == 0) Rect(0, 0, size.width, size.height)
+        if (index == 0) (frag, Rect(0, 0, size.width, size.height))
         else logicError()
       case _ =>
         var i = 0
         var c = 0
-        var res: Rect = null
+        var res: (LineFrag.Text, Rect) = null
         while (i < frags.size && res == null) {
           val f = frags(i)
           if (c + f.count > index) {
-            res = f.rect(index - c) + Position(f.left, f.top)
+            val rr = f.get(index - c)
+            res = (rr._1, rr._2 + Position(f.left, f.top))
           }
           c += f.count
           i += 1
@@ -136,6 +137,8 @@ sealed trait LineFrag extends Frag {
 object LineFrag {
 
   class Text(val text: String, val style: TextStyle) extends LineFrag {
+    // TODO use codepoint index, or even better grapheme index
+    def measurePrefix(small: Int): Float = style.measure(text.take(small)).width
     val measure = style.measure(text)
     def count = 1
     def width = measure.width

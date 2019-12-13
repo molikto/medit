@@ -19,10 +19,12 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     canvas.save()
     canvas.translate(scrollX.toFloat, scrollY.toFloat)
     mode match {
+      case Mode.Insert(node, pos, _, small, total) =>
+        val (t, rect) = root.get(node, pos)
+        val pre = t.measurePrefix(small)
+        canvas.draw(Rect(rect.left + pre, rect.top, 3, rect.height), ShapeStyle.cursor)
       case Mode.Frag(node, pos) =>
-        canvas.draw(root.rect(node, pos), ShapeStyle.cursor)
-      case Mode.Edit(node) =>
-      canvas.draw(root.rect(node), ShapeStyle.cursor)
+        canvas.draw(root.get(node, pos)._2, ShapeStyle.cursor)
     }
     root.render(canvas)
     canvas.restore()
@@ -60,66 +62,86 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   def onChar(codepoint: Codepoint, mods: Mods): Unit = mode match {
     case Mode.Frag(node, pos) =>
       codepoint.toChar match {
-        case 'u' =>
-//          if (focus.nonEmpty) focus = focus.dropRight(1)
-        case 'd' =>
-//          if (root(focus).childs.nonEmpty) {
-//            focus = focus :+ 0
-//          }
-        case 'n' =>
-//          if (focus.nonEmpty) {
-//            val p = root(focus).parent
-//            if (p != null && p.childs.size > focus.last + 1) {
-//              focus = focus.dropRight(1) :+ (focus.last + 1)
-//            }
-//          }
-        case 'p' =>
-//          if (focus.nonEmpty) {
-//            if (focus.last > 0) {
-//              focus = focus.dropRight(1) :+ (focus.last - 1)
-//            }
-//          }
-        case 'D' =>
-//          if (focus.nonEmpty) {
-//            root(focus.dropRight(1)) match {
-//              case col: Node.Collection =>
-//                col.tryDelete(focus.last)
-//              case _ =>
-//            }
-//          }
+//        case 'u' =>
+////          if (focus.nonEmpty) focus = focus.dropRight(1)
+//        case 'd' =>
+////          if (root(focus).childs.nonEmpty) {
+////            focus = focus :+ 0
+////          }
+//        case 'n' =>
+////          if (focus.nonEmpty) {
+////            val p = root(focus).parent
+////            if (p != null && p.childs.size > focus.last + 1) {
+////              focus = focus.dropRight(1) :+ (focus.last + 1)
+////            }
+////          }
+//        case 'p' =>
+////          if (focus.nonEmpty) {
+////            if (focus.last > 0) {
+////              focus = focus.dropRight(1) :+ (focus.last - 1)
+////            }
+////          }
+//        case 'D' =>
+////          if (focus.nonEmpty) {
+////            root(focus.dropRight(1)) match {
+////              case col: Node.Collection =>
+////                col.tryDelete(focus.last)
+////              case _ =>
+////            }
+////          }
         case 'i' =>
-          if (pos == 0 && root(node).tryEdit()) {
-            mode = Mode.Edit(node)
+          val (tn, _)= root.get(node, pos)
+          if (tn.node != null) {
+            mode = Mode.Insert(node, pos, true, 0, tn.text.size)
           }
-        case 'j' =>
-          //visualDown(focus).foreach(focus = _)
-        case 'k' =>
-          //visualUp(focus).foreach(focus = _)
-        case 'a' =>
-//          val index = root(focus).tryNewChild()
-//          if (index >= 0) {
-//            focus = focus :+ index
-//          }
-        case 's' =>
-          save(root.save())
-        case _ =>
+//        case 'j' =>
+//          //visualDown(focus).foreach(focus = _)
+//        case 'k' =>
+//          //visualUp(focus).foreach(focus = _)
+//        case 'a' =>
+////          val index = root(focus).tryNewChild()
+////          if (index >= 0) {
+////            focus = focus :+ index
+////          }
+//        case 's' =>
+//          save(root.save())
+//        case _ =>
       }
-    case Mode.Edit(node) =>
-      if (codepoint == ' ') {
-        root(node).editCommit()
-        mode = Mode.Frag(node, 0)
-      } else {
-        root(node).editAppend(codepoint)
+    case Mode.Insert(node, pos, editable, small, total) =>
+      if (editable) {
+        if (codepoint == ' ') {
+          root(node).editCommit()
+          mode = Mode.Frag(node, 0)
+        } else {
+          root(node).editAppend(codepoint, small)
+          mode = Mode.Insert(node, pos, editable, small + 1, total + 1)
+        }
       }
   }
 
-  def onKey(key: Int, mods: Mods): Unit = {
-    mode match {
-      case Mode.Frag(node, pos) =>
-      case Mode.Edit(node) =>
-        if (key == Key.Backspace) {
-          root(node).editBackspace()
-        }
+  def onKey(key: Int, action: Int, mods: Mods): Unit = {
+    // TODO implement repeat keys
+    if (action == 1) {
+      mode match {
+        case Mode.Frag(node, pos) =>
+        case Mode.Insert(node, pos, editable, small, total) =>
+          if (key == Key.Backspace) {
+            if (editable) {
+              if (small > 0) {
+                root(node).editBackspace(small)
+                mode = Mode.Insert(node, pos, editable, small - 1, total - 1)
+              }
+            }
+          } else if (key == Key.Left) {
+            if (small > 0) {
+              mode = Mode.Insert(node, pos, editable, small - 1, total)
+            }
+          } else if (key == Key.Right) {
+            if (small < total) {
+              mode = Mode.Insert(node, pos, editable, small + 1, total)
+            }
+          }
+      }
     }
   }
 }

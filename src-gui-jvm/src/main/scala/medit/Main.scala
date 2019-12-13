@@ -145,7 +145,7 @@ class Window extends Canvas {
     editor.onChar(codepoint, mods)
   })
   glfwSetKeyCallback(window, (window: Long, key: Int, scancode: Int, action: Int, mods: Int) => {
-    editor.onKey(key, mods)
+    editor.onKey(key, action, mods)
   })
   glfwSetMouseButtonCallback(window, (_: Long, button: Int, action: Int, mods: Int) => {
     editor.onMouse(button, action, mods, xpos, ypos)

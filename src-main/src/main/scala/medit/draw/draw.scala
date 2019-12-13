@@ -91,6 +91,7 @@ object TextStyle {
 case class ShapeStyle(color: Int)
 
 object ShapeStyle {
-  val cursor : ShapeStyle = ShapeStyle(0x99214283)
+  val cursor : ShapeStyle = ShapeStyle(0xFF214283)
+  val selection: ShapeStyle = ShapeStyle(0x99214283)
   val error: ShapeStyle = ShapeStyle(0xFFAA0000)
 }

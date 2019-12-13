@@ -141,6 +141,8 @@ package object input {
      * GLFW_KEY_LAST          = GLFW_KEY_MENU;
      */
     val Backspace = 259
+    val Right = 262
+    val Left = 263
   }
 
 

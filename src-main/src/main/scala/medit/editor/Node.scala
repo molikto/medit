@@ -24,9 +24,8 @@ sealed trait Node {
 
   def tryDelete(last: Int) = false
   def tryNewChild(): Int = -1
-  def tryEdit(): Boolean = false
-  def editAppend(c: Int): Unit = logicError()
-  def editBackspace(): Unit = logicError()
+  def editAppend(c: Int, small: Int): Unit = logicError()
+  def editBackspace(small: Int): Unit = logicError()
   def editCommit(): Unit = logicError()
 
   def reverse(f: Node): Seq[Int] = {
@@ -59,9 +58,10 @@ sealed trait Node {
   }
 
 
-  def rect(focus: Seq[Int], index: Int): Rect = {
+  def get(focus: Seq[Int], index: Int): (LineFrag.Text, Rect) = {
     val r = rect(focus)
-    apply(focus).frag.rect(index) + r.leftTop
+    val (t, rr) = apply(focus).frag.get(index)
+    (t, rr + r.leftTop)
   }
 
   def rect(focus: Seq[Int]): Rect = {
@@ -315,16 +315,13 @@ object Node {
     override def childs: Seq[Node] = Seq.empty
 
     protected var buffer = ""
-    override def tryEdit(): Boolean = {
-      buffer = ""
-      true
-    }
-    override def editAppend(c: Int): Unit = {
-      buffer = buffer + c.toChar.toString
+
+    override def editAppend(c: Int, small: Int): Unit = {
+      buffer = buffer.take(small) + c.toChar.toString + buffer.drop(small)
     }
 
-    override def editBackspace(): Unit = {
-      if (buffer.nonEmpty) buffer = buffer.dropRight(1)
+    override def editBackspace(small: Int): Unit = {
+      buffer = buffer.take(small - 1) + buffer.drop(small)
     }
 
     def tryCommit(buffer: String): Boolean
