@@ -10,6 +10,7 @@ object StructureException {
   case class UnfoldNotSupported() extends StructureException
   case class CannotUnfold() extends StructureException
   case class UnknownField() extends StructureException
+  case class FieldNotAllowedHere() extends StructureException
   case class DuplicateFieldInTemplate() extends StructureException
   case class DuplicateName() extends StructureException
 
@@ -107,9 +108,11 @@ sealed trait Template {
   /** MEDIT_EXTRA_START **/
   def check(fields: Seq[NameTypeTag]): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
-    def rec(t: Template, allowUnfold: Boolean = false): Unit = {
-      this match {
+    def rec(t: Template, allowUnfold: Boolean = false, allowField: Boolean = true): Unit = {
+      t match {
         case f: Template.FieldRef =>
+          // the editor depends on these, child - field relationship should be one - one
+          if (!allowField) throw StructureException.FieldNotAllowedHere()
           f match {
             case Template.Unfold(_) =>
               if (!allowUnfold) throw StructureException.UnfoldNotSupported()
@@ -133,7 +136,8 @@ sealed trait Template {
           }
           left.foreach(a => rec(a))
           b1.foreach(a => rec(a))
-          sep.foreach(a => rec(a))
+          // because then the field will be repeated in node
+          sep.foreach(a => rec(a, allowField = false))
           b2.foreach(a => rec(a))
         case _ =>
       }

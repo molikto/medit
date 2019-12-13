@@ -8,7 +8,7 @@ import org.lwjgl.opengl._
 import org.lwjgl.system._
 import java.nio._
 
-import medit.draw.{DrawCall, Position, TextMeasure, TextStyle, Typeface}
+import medit.draw.{Canvas, Position, Rect, ShapeStyle, TextMeasure, TextStyle, Typeface}
 import medit.editor.Editor
 import medit.structure.Language
 import org.lwjgl.glfw.Callbacks._
@@ -39,11 +39,13 @@ object typefaces {
 }
 
 
-class Impl() extends draw.Impl {
+class Impl extends draw.Impl {
   override def measure(textStyle: TextStyle, str: String): TextMeasure = {
     TextMeasure(textStyle.size * str.size * 0.6F, textStyle.size * 0.35F, textStyle.size * 1.05F)
   }
+
 }
+
 
 
 class Paints() {
@@ -55,11 +57,13 @@ class Paints() {
 class Shapes {
   val rect: sk_rect_t = new sk_rect_t()
 }
-
-class Window {
-  private var window = 0L
-
+object Window {
   lazy val glinterface = gr_glinterface_create_native_interface()
+  draw.impl = new Impl()
+}
+
+class Window extends Canvas {
+  private var window = 0L
 
   var windowSize: (Int, Int) = (840, 1400)
   var frameBufferSize: (Int, Int) = null
@@ -121,7 +125,6 @@ class Window {
     calculateDp()
     glfwMakeContextCurrent(window)
     glViewport(0, 0, width, height)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     destroySurface()
     createSurface()
     render()
@@ -152,12 +155,13 @@ class Window {
   glEnable(GL_FRAMEBUFFER_SRGB)
   // GrContextOptions options;
   //options.fRequireDecodeDisableForSRGB = false; //was removed?
-  gr_context = gr_context_make_gl(glinterface)
+  gr_context = gr_context_make_gl(Window.glinterface)
   def destroySurface(): Unit = {
     sk_surface_unref(surface)
     gr_backendrendertarget_delete(gr_backend)
     gr_ffi.deallocate()
   }
+
   def createSurface(): Unit = {
     gr_ffi = new gr_gl_framebufferinfo_t()
     gr_ffi.fFBOID(0)
@@ -175,15 +179,14 @@ class Window {
       null,
       null
     )
-    canvas = sk_surface_get_canvas(surface)
+    canvas= sk_surface_get_canvas(surface)
   }
   createSurface()
   glfwSwapInterval(1)
   glfwShowWindow(window)
   val rgb = 43f / 255
-  glClearColor(rgb, rgb, rgb, 0.0f)
+  glClearColor(rgb, rgb, rgb, 1.0f)
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
-  medit.draw.impl = new Impl()
   paints = new Paints()
   shapes = new Shapes()
 
@@ -196,7 +199,6 @@ class Window {
 //    ujson.read(utils.read("language-mlang.json")),
 //    a => utils.save(a, "language-mlang.json"))
   while (!glfwWindowShouldClose(window)) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     render()
     gr_context_flush(gr_context)
     glfwSwapBuffers(window)
@@ -218,43 +220,51 @@ class Window {
 
   var shapes: Shapes = null
 
-  private def perform(c: DrawCall): Unit = {
-    c match {
-      case DrawCall.Text(position, style, text) =>
-        val paint = paints.text
-        sk_paint_set_color(paint, style.color)
-        sk_paint_set_textsize(paint, style.size * dp)
-        sk_paint_set_typeface(paint, typefaces(style.typeface))
-        sk_canvas_draw_text(canvas, text, text.size, position.left * dp, position.top * dp, paint)
-      case DrawCall.Rect(rect, style) =>
-        val paint = paints.shape
-        sk_paint_set_stroke_width(paint, 1 * dp)
-        sk_paint_set_color(paint, style.color)
-        val r = shapes.rect
-        r.left(rect.left * dp)
-        r.top(rect.top * dp)
-        r.bottom((rect.top + rect.height) * dp)
-        r.right((rect.left + rect.width) * dp)
-        sk_canvas_draw_rect(canvas, r, paint)
-      case DrawCall.Translated(position, calls) =>
-        sk_canvas_save(canvas)
-        sk_canvas_translate(canvas, position.left * dp, position.top * dp)
-        calls.foreach(perform)
-        sk_canvas_restore(canvas)
-      case DrawCall.Group(calls) =>
-        calls.foreach(perform)
-    }
-  }
 
   var lastFrameTime = 0L
 
+
+  override def draw(text: String, style: TextStyle, left: Float, top: Float): Unit = {
+    val paint = paints.text
+    sk_paint_set_color(paint, style.color)
+    sk_paint_set_textsize(paint, style.size * dp)
+    sk_paint_set_typeface(paint, typefaces(style.typeface))
+    sk_canvas_draw_text(canvas, text, text.size, left * dp, top * dp, paint)
+  }
+
+
+  override def draw(rect: Rect, style: ShapeStyle): Unit = {
+    val paint = paints.shape
+    sk_paint_set_stroke_width(paint, 1 * dp)
+    sk_paint_set_color(paint, style.color)
+    val r = shapes.rect
+    r.left(rect.left * dp)
+    r.top(rect.top * dp)
+    r.bottom((rect.top + rect.height) * dp)
+    r.right((rect.left + rect.width) * dp)
+    sk_canvas_draw_rect(canvas, r, paint)
+  }
+
+  override def save(): Unit = {
+    sk_canvas_save(canvas)
+  }
+
+  override def restore(): Unit = {
+    sk_canvas_restore(canvas)
+  }
+
+  override def translate(x: Float, y: Float): Unit = {
+    sk_canvas_translate(canvas, x * dp, y * dp)
+  }
+
   def render(): Unit = {
     val start = System.currentTimeMillis()
-    perform(editor.render(windowSize._1, windowSize._2))
+    glClear(GL_COLOR_BUFFER_BIT)
+    editor.render(this, windowSize._1, windowSize._2)
     lastFrameTime = System.currentTimeMillis() - start
     val str = lastFrameTime.toString
     val measure = TextStyle.delimiters.measure(str)
-    perform(DrawCall.Text(Position(measure.y, windowSize._1 - measure.w, 0), TextStyle.delimiters, str))
+    draw(str, TextStyle.delimiters, measure.y, windowSize._1 - measure.width)
   }
 
   def renderTest() = {

@@ -1,7 +1,7 @@
 package medit.editor
 
 import medit.{draw, editor}
-import medit.draw.{DrawCall, Position, Rect, Size, TextMeasure, TextStyle}
+import medit.draw.{Position, Rect, Size, TextMeasure, TextStyle}
 import medit.structure.Template.{LeftPad, RightPad}
 import medit.structure.{Data, Language, NameTypeTag, Template, Type, TypeTag}
 
@@ -14,9 +14,10 @@ import scala.collection.immutable.{AbstractSeq, LinearSeq}
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
 
+
   def save(): ujson.Value
 
-  protected var _parent: Node
+  @nullable protected var _parent: Node
   @nullable def parent: Node = _parent
   def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else logicError()
   def childs: Seq[Node]
@@ -28,55 +29,54 @@ sealed trait Node {
   def editBackspace(): Unit = logicError()
   def editCommit(): Unit = logicError()
 
-  // all in parent coordinate
-  protected var top: Float = 0
-  protected var left: Float = 0
-  protected var _draw: DrawTemplate = null
-  protected var baseline: Float = -1
-  def multiline = baseline < 0
-  protected var size: Size = null
 
-  def rect = Rect(left, top, size.height, size.width)
-
-  def findAt(xpos: Float, ypos: Float): Option[Seq[Int]] = {
-    if (xpos >= 0 && xpos <= size.width && ypos >= 0 && ypos <= size.height) {
-      val res = childs.map(c => c.findAt(xpos - c.left, ypos - c.top))
-          .zipWithIndex.find(_._1.nonEmpty).map(a => a._2 +: a._1.get).getOrElse(Seq.empty)
-      Some(res)
-    } else {
-      None
-    }
-  }
-
+//  def findAt(xpos: Float, ypos: Float): Option[Seq[Int]] = {
+//    if (xpos >= 0 && xpos <= size.width && ypos >= 0 && ypos <= size.height) {
+//      val res = childs.map(c => c.findAt(xpos - c.left, ypos - c.top))
+//          .zipWithIndex.find(_._1.nonEmpty).map(a => a._2 +: a._1.get).getOrElse(Seq.empty)
+//      Some(res)
+//    } else {
+//      None
+//    }
+//  }
 
   def rect(focus: Seq[Int]): Rect = {
-    if (focus.isEmpty) {
-      rect
-    } else {
-      childs(focus.head).rect(focus.tail) + Position(left, top, 0)
+    var left = 0F
+    var top = 0F
+    var fcs = focus
+    var hack = frag.size
+    var f: Frag = null
+    while (f == null) {
+      f = apply(fcs).frag
+      fcs = fcs.dropRight(1)
     }
+    val size = f.size
+    while (f != frag) {
+      left += f.left
+      top += f.top
+      f = f.parent
+    }
+    Rect(left, top, size.width, size.height)
   }
+
+  var frag: Frag = null
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
-  def layout(width: Float, forceLinear: Boolean): Unit
-
-  def flatten(_draw: DrawTemplate): DrawCall = _draw match {
-    case DrawTemplate.ChildChild(i, j) => childs(i).childs(j).draw
-    case DrawTemplate.Child(i) => childs(i).draw
-    case DrawTemplate.Translated(position, temps) =>
-      DrawCall.Translated(position, temps.map(flatten))
-    case DrawTemplate.Group(temps) =>
-      DrawCall.Group(temps.map(flatten))
-    case DrawTemplate.Just(call) =>
-      call
+  def layout(width: Float, forceLinear: Boolean): Frag = {
+    if (frag != null) frag.node = null
+    frag = doLayout(width, forceLinear)
+    frag.node = this
+    frag
   }
 
-  def draw: DrawCall = flatten(_draw)
+  def render(canvas: draw.Canvas) = frag.render(canvas)
+
+  protected def doLayout(width: Float, forceLinear: Boolean): Frag
 }
 
 object Node {
 
-  val DefaultIndent: Float = TextStyle.delimiters.unit.w * 2
+  val DefaultIndent: Float = TextStyle.delimiters.unit.width * 2
 
   def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = {
     def fromFields(s: Structure, fields: Seq[NameTypeTag], obj: mutable.Map[String, ujson.Value]): Unit = {
@@ -135,10 +135,6 @@ object Node {
     default(null, a, a.root)
   }
 
-  type LayoutRes = (DrawTemplate, Size, Float)
-
-
-
 
   sealed trait HaveChilds extends Node {
     protected val _childs = new mutable.ArrayBuffer[Node]()
@@ -158,133 +154,76 @@ object Node {
       s._parent = this
     }
 
-
-    def resolveChildPositions(_1: DrawTemplate, position: Position = Position.unit): Unit = _1 match {
-      case DrawTemplate.Child(i) =>
-        if (childs.size <= i) {
-          logicError()
-        }
-        val c = childs(i)
-        c.left = position.left
-        c.top = position.top
-      case DrawTemplate.ChildChild(i, j) =>
-        // a unfolded child will have the same size as parent
-        val c = childs(i).childs(j)
-        c.left = position.left
-        c.top = position.top
-      case DrawTemplate.Group(temps) =>
-        temps.foreach(a => resolveChildPositions(a, position))
-      case DrawTemplate.Translated(pos, temps) =>
-        temps.foreach(a => resolveChildPositions(a, position + pos))
-      case _: DrawTemplate.Just =>
-    }
-
-    def layoutLinear(left: Seq[Template]) : LayoutRes = {
+    def layoutLinear(left: Seq[Template]) : LineFrag = {
       if (left.isEmpty) {
-        (DrawTemplate.Group(Seq.empty), Size(0, 0), 0)
+        new LineFrag.Compose(Seq.empty)
       } else {
-        var calls = Seq.empty[DrawTemplate]
-        val res = left.map({ l =>
-          layout(l, 0, true)
-        })
-        val y = res.map(_._3).max
-        val my = res.map(a => a._2.height - a._3).max
-        var width = 0F
-        res.foreach({ l =>
-          calls = calls :+ l._1.translated(Position(width, y  - l._3, 0))
-          width += l._2.width
-        })
-        (DrawTemplate.Group(calls), Size(width, y + my), y)
+        new LineFrag.Compose(left.map(l => dependentCast[LineFrag](layout(l, 0, true))))
       }
     }
 
-    @inline def layoutComposite(left: Seq[Template], cs0: Seq[LayoutRes], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): LayoutRes = {
-      val (pc, p, pb) = layoutLinear(left)
-      val cs = cs0.map(_._2.width).sum
-      val (sc, s, sb) = layoutLinear(sep)
-      val (ec, e, eb) = layoutLinear(end)
-      if (forceLinear || (!cs0.exists(_._3 < 0) && p.width + cs + s.width * cs0.size + e.width <= width)) {
-        var ymax = pb max eb max sb
-        var mymax = (p.height - pb) max (e.height - eb) max (s.height - sb)
-        cs0.foreach(a => {
-          ymax = a._3 max ymax
-          mymax = (a._2.height - a._3) max mymax
-        })
-        var left = p.width
-        var calls = Seq(pc.translated(Position(0, ymax - pb, 0)))
-        var i = 0
-        cs0.foreach(c => {
-          calls = calls :+ c._1.translated(Position(left, ymax - c._3, 0))
-          left = left + c._2.width
-          if (i != cs0.size - 1) {
-            calls = calls :+ sc.translated(Position(left, ymax - sb, 0))
-            left += s.width
+    @inline def layoutComposite(left: Seq[Template], cs: Seq[Frag], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
+      val leftFrag = layoutLinear(left)
+      val sepFrag = layoutLinear(sep)
+      val endFrag = layoutLinear(end)
+      if (forceLinear || !cs.exists(_.isInstanceOf[Block])
+          && leftFrag.width + cs.map(a => dependentCast[LineFrag](a).width).sum + sepFrag.width * cs.size + endFrag.width <= width) {
+        new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(sep), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
+      } else {
+        val leftFrag1 = {
+          val removedPadding = left.reverse.dropWhile(_ == RightPad).reverse
+          if (removedPadding.size != left.size) {
+            layoutLinear(removedPadding)
+          } else {
+            leftFrag
           }
-          i += 1
-        })
-        calls = calls :+ ec.translated(Position(left, ymax - eb, 0))
-        left += e.width
-        (DrawTemplate.Group(calls), Size(left, ymax + mymax), ymax)
-      } else {
-        val (pc, p, _) = layoutLinear(left.reverse.dropWhile(_ == RightPad).reverse)
-        val (ec, e, _) = layoutLinear(end.dropWhile(_ == LeftPad))
-        var calls = Seq(pc)
-        var width = p.width
-        var top = p.height
-        cs0.foreach(c => {
-          calls = calls :+ c._1.translated(Position(Node.DefaultIndent, top, 0))
-          top += c._2.height
-          width = (Node.DefaultIndent + c._2.width) max width
-          // FIXME add seperator
-        })
-        calls = calls :+ ec.translated(Position(0, top, 0))
-        top += e.height
-        width = width max e.width
-        (DrawTemplate.Group(calls), Size(width, top), -1)
+        }
+        // FIXME add seperator
+        val endFrag1 = {
+          val removedPadding = end.dropWhile(_ == LeftPad)
+          if (removedPadding.size != end.size) {
+            layoutLinear(removedPadding)
+          } else {
+            endFrag
+          }
+        }
+        new Block.Compose(0, Seq(
+          new Block.Line(leftFrag1),
+          new Block.Compose(Node.DefaultIndent, cs.map(_.wrap())),
+          new Block.Line(endFrag1)
+        ))
       }
     }
 
-    def layoutText(style: TextStyle, name: String, leftPad: Float, rightPad: Float) = {
-      val measure = style.measure(name)
-      (DrawTemplate.Just(DrawCall.Text(Position(leftPad, measure.y, 0), style, name)), Size(measure.w + leftPad + rightPad, measure.y + measure.my), measure.y)
-    }
-
-    def layout(left: Template, width: Float, forceLinear: Boolean): LayoutRes = {
+    def layout(left: Template, width: Float, forceLinear: Boolean): Frag = {
       left match {
         case Template.Keyword(name) =>
-          layoutText(TextStyle.keyword, name, 0F, 0F)
+          new LineFrag.Text(name, TextStyle.keyword)
         case Template.Separator(name) =>
           val style = TextStyle.delimiters
-          val unit = style.unit.w / 3
-          layoutText(style, name, unit, unit)
+          val unit = style.unit.width / 3
+          val pad1 = new LineFrag.Pad(unit)
+          val pad2 = new LineFrag.Pad(unit)
+          new LineFrag.Compose(Seq(pad1, new LineFrag.Text(name, TextStyle.delimiters), pad2))
         case Template.RightPad  =>
-          layoutText(TextStyle.delimiters, " ", 0F, 0F)
+          new LineFrag.Pad(TextStyle.delimiters.unit.width)
         case Template.LeftPad  =>
-          layoutText(TextStyle.delimiters, " ", 0F, 0F)
+          new LineFrag.Pad(TextStyle.delimiters.unit.width)
         case Template.Delimiter(str) =>
-          layoutText(TextStyle.delimiters, str, 0F, 0F)
+          new LineFrag.Text(str, TextStyle.delimiters)
         case f: Template.Field =>
-          val c = childs(f.index)
-          c.layout(width, forceLinear)
-          (DrawTemplate.Child(f.index), c.size, c.baseline)
+          childs(f.index).layout(width, forceLinear)
         case Template.Unfold(c) =>
           logicError()
         case Template.Tree(left, b1, content, sep, b2) =>
-          content match {
+          val cons = content match {
             case Seq(f@Template.Unfold(_)) =>
               val c = dependentCast[Collection](childs(f.index))
-              val cs = c.layoutChilds(width - Node.DefaultIndent, forceLinear, f.index)
-              val res = layoutComposite(left ++ b1, cs, sep.toSeq, b2, width, forceLinear)
-              c._draw = DrawTemplate.Group(Seq.empty)
-              c.size = res._2
-              c.baseline = res._3
-              res
+              c.childs.map(_.layout(width - Node.DefaultIndent, forceLinear))
             case _ =>
-              val cons = content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
-              layoutComposite(left ++ b1,
-                cons,
-                sep.toSeq, b2, width, forceLinear)
+              content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
           }
+          layoutComposite(left ++ b1, cons, sep.toSeq, b2, width, forceLinear)
       }
     }
   }
@@ -308,14 +247,9 @@ object Node {
     }
 
 
-    override def layout(width: Float, forceLinear: Boolean): Unit = {
-      val res = layout(template, width, forceLinear)
-      resolveChildPositions(res._1)
-      _draw = res._1
-      size = res._2
-      baseline = res._3
+    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
+      layout(template, width, forceLinear)
     }
-
   }
 
   class Collection(
@@ -342,23 +276,13 @@ object Node {
       ujson.Arr.from(childs.map(_.save()))
     }
 
-    def layoutChilds(width: Float, forceLinear: Boolean, childChild: Int = -1): Seq[LayoutRes] = {
-      childs.zipWithIndex.map(a => {
-        val res = a._1.layout(width, forceLinear)
-        (if (childChild == -1) DrawTemplate.Child(a._2) else DrawTemplate.ChildChild(childChild, a._2), a._1.size, a._1.baseline)
-      })
-    }
 
-    override def layout(width: Float, forceLinear: Boolean): Unit = {
+    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
       val left = Seq(Template.Delimiter("["))
       val sep = Seq(Template.Separator(","))
       val end = Seq(Template.Delimiter("]"))
-      val cs = layoutChilds(width - Node.DefaultIndent, forceLinear)
-      val res = layoutComposite(left, cs, sep, end, width, forceLinear)
-      resolveChildPositions(res._1)
-      _draw = res._1
-      size = res._2
-      baseline = res._3
+      val cs = childs.map(_.layout(width - Node.DefaultIndent, forceLinear))
+      layoutComposite(left, cs, sep, end, width, forceLinear)
     }
   }
 
@@ -389,12 +313,8 @@ object Node {
 
     def style: TextStyle
 
-    override def layout(width: Float, forceLinear: Boolean): Unit = {
-      val str = if (buffer.isEmpty) "?" else buffer
-      val ts = style.measure(str)
-      baseline = ts.y
-      size = Size(ts.w, ts.y + ts.my)
-      _draw = DrawTemplate.Just(DrawCall.Text(Position(0, baseline, 0), style, str))
+    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
+      new LineFrag.Text(buffer, style)
     }
   }
 

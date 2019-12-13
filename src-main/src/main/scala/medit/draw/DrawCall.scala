@@ -34,24 +34,24 @@ object Size {
   }
 }
 
-case class TextMeasure(w: Float, my: Float, y: Float) {
-  def *(a: Int) = TextMeasure(w * a, my, y)
-  def +(y: TextMeasure): TextMeasure = TextMeasure(w + y.w, my max y.my, this.y max y.y)
+case class TextMeasure(width: Float, my: Float, y: Float) {
+  def *(a: Int) = TextMeasure(width * a, my, y)
+  def +(y: TextMeasure): TextMeasure = TextMeasure(width + y.width, my max y.my, this.y max y.y)
 }
 
-case class Position(left: Float, top: Float, depth: Int) {
-  def +(p: Position) = Position(left + p.left, top + p.top, depth + p.depth)
+case class Position(left: Float, top: Float) {
+  def +(p: Position) = Position(left + p.left, top + p.top)
 }
 
 object Position {
-  val unit = Position(0, 0, 0)
+  val unit = Position(0, 0)
 }
-case class Rect(left: Float, top: Float, height: Float, width: Float) {
+case class Rect(left: Float, top: Float, width: Float, height: Float) {
   def contains(xpos: Float, ypos: Float): Boolean = {
     xpos >= left && xpos <= left + width && ypos >= top && ypos <= top + height
   }
 
-  def +(p: Position) = Rect(left + p.left, top + p.top, height, width)
+  def +(p: Position) = Rect(left + p.left, top + p.top, width, height)
 }
 
 sealed trait Typeface
@@ -78,23 +78,4 @@ case class ShapeStyle(color: Int)
 object ShapeStyle {
   val cursor : ShapeStyle = ShapeStyle(0x99214283)
   val error: ShapeStyle = ShapeStyle(0xFFAA0000)
-}
-
-sealed trait DrawCall {
-  def translated(position: Position): DrawCall = if (position == Position.unit) this else this match {
-    case DrawCall.Translated(p, calls) =>
-      DrawCall.Translated(p + position, calls)
-    case DrawCall.Group(calls) =>
-      DrawCall.Translated(position, calls)
-    case _ =>
-      DrawCall.Translated(position, Seq(this))
-  }
-
-}
-
-object DrawCall {
-  case class Text(position: Position, style: TextStyle, text: String) extends DrawCall
-  case class Rect(rect: medit.draw.Rect, style: ShapeStyle) extends DrawCall
-  case class Translated(position: Position, calls: Seq[DrawCall]) extends DrawCall
-  case class Group(calls: Seq[DrawCall]) extends DrawCall
 }
