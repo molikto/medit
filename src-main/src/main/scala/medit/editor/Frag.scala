@@ -159,7 +159,7 @@ sealed trait LineFrag extends Frag {
         val a = a0._1
         val dis = Math.abs(a._2 - xpos) min Math.abs(a._1.size.width + a._2 - xpos)
         (dis, a0._2)
-      }).minBy(_._1)._2
+      }).minBy(_._1)(Ordering.Float.TotalOrdering)._2
     }
     val tk = tokens(index)
     (if (index == 0 || tokens(index - 1)._3) null else tokens(index - 1)._1,

@@ -7,7 +7,13 @@
         {
           "name": "str",
           "fields": [
-            
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str",
+                "name": "const"
+              }
+            }
           ],
           "template": [
             
@@ -64,7 +70,8 @@
             {
               "name": "name",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "reference"
               }
             }
           ],
@@ -84,7 +91,8 @@
         {
           "name": "name",
           "tag": {
-            "$type": "str"
+            "$type": "str",
+            "name": "declare"
           }
         },
         {
@@ -134,7 +142,8 @@
         {
           "name": "name",
           "tag": {
-            "$type": "str"
+            "$type": "str",
+            "name": "declare"
           }
         },
         {
@@ -241,7 +250,8 @@
             {
               "name": "name",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "declare"
               }
             },
             {
@@ -318,7 +328,8 @@
             {
               "name": "name",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "declare"
               }
             },
             {
@@ -396,7 +407,8 @@
             {
               "name": "str",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "const"
               }
             }
           ],
@@ -410,7 +422,8 @@
             {
               "name": "name",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "reference"
               }
             }
           ],
@@ -506,7 +519,8 @@
             {
               "name": "str",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "const"
               }
             }
           ],
@@ -520,7 +534,8 @@
             {
               "name": "str",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "const"
               }
             }
           ],
@@ -534,7 +549,8 @@
             {
               "name": "name",
               "tag": {
-                "$type": "str"
+                "$type": "str",
+                "name": "reference"
               }
             }
           ],

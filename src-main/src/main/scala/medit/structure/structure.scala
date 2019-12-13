@@ -1,5 +1,6 @@
 package medit.structure
 
+import medit.draw.TextStyle
 import medit.utils
 import upickle.default.{macroRW, ReadWriter => RW}
 
@@ -15,6 +16,7 @@ object StructureException {
   case class DuplicateName() extends StructureException
   case class EmptyName() extends StructureException
   case class BlankConstants() extends StructureException
+  case class UnknownTextStyle() extends StructureException
 
   case class UnknownReference() extends StructureException
 }
@@ -23,7 +25,7 @@ object StructureException {
 sealed trait TypeTag {
   /** MEDIT_EXTRA_START **/
   def check(types: Seq[Type]): Unit = this match {
-    case TypeTag.Str =>
+    case TypeTag.Str(style) =>
     case TypeTag.Opt(tt) => tt.check(types)
     case TypeTag.Arr(tt) => tt.check(types)
     case TypeTag.Bag(tt) => tt.check(types)
@@ -46,7 +48,12 @@ object TypeTag {
   }
   /** MEDIT_EXTRA_END **/
   @upickle.implicits.key("str")
-  case object Str extends TypeTag
+  case class Str(name: String) extends TypeTag {
+    val style = if (name.isEmpty) TextStyle.const else TextStyle.find(name) match {
+      case Some(a) => a
+      case _ => throw StructureException.UnknownTextStyle()
+    }
+  }
   @upickle.implicits.key("opt")
   case class Opt(item: TypeTag) extends Coll
   @upickle.implicits.key("arr")
@@ -59,7 +66,7 @@ object TypeTag {
     var index = -1
     /** MEDIT_EXTRA_END **/
   }
-  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str.type], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
+  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
 }
 
 case class NameTypeTag(name: String, tag: TypeTag)

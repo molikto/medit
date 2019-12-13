@@ -65,6 +65,15 @@ to bootstrap with minimal effort, we first view the editor as a tree editor, for
 
 `Node` is a tree where each node has a type of structured which is a instance of named structure syntax, or collection, which is for combinator types`arr`, `opt` etc
 
+then from the template, it generates `Frag`, and it is used for layout purpose.
+
+then we add ways to resolve insert point from mouse.
+
+* TODO
+   * handle all insertion points
+   * handle keyword choice
+   * handle reference
+
 ## other efforts
  
 * IntelliJ MPS

@@ -124,7 +124,7 @@ object Node {
       }))
     }
     a match {
-      case TypeTag.Str => new Str(parent).init(data.str)
+      case str@TypeTag.Str(style) => new Str(parent, str.style).init(data.str)
       case coll: TypeTag.Coll =>
         val col = new Collection(parent, language, coll)
         col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
@@ -150,7 +150,7 @@ object Node {
   }
 
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
-    case TypeTag.Str => new Str(parent)
+    case s@TypeTag.Str(_) => new Str(parent, s.style)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
     case n: TypeTag.Ref =>
       if (n.index == -1) {
@@ -375,14 +375,14 @@ object Node {
       }
     }
 
-    override def style: TextStyle = TextStyle.reference
+    override def style: TextStyle = TextStyle.choice
   }
 
   class Str(
-      override protected var _parent: Node
+      override protected var _parent: Node,
+      val style: TextStyle
   ) extends StringLeaf {
 
-  override def style: TextStyle = TextStyle.reference
 
   override def save(): Value = ujson.Str(buffer)
 
