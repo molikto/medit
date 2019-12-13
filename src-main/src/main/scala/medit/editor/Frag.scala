@@ -4,6 +4,8 @@ import medit.draw
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
 import medit.utils._
 
+import scala.collection.mutable
+
 
 sealed trait Frag {
 
@@ -126,26 +128,47 @@ sealed trait LineFrag extends Frag {
   def width: Float
   def size = Size(measure.width, measure.y + measure.my)
 
-  def flattenTexts(xpos: Float): Seq[(LineFrag.Text, Float)] = this match {
+  def flattenAtomics(xpos: Float): Seq[(LineFrag.Atomic, Float)] = this match {
     case text: LineFrag.Text => Seq((text, xpos))
-    case _: LineFrag.Pad => Seq.empty
-    case compose: LineFrag.Compose => compose.frags.flatMap(a => a.flattenTexts(xpos + a.left))
+    case p: LineFrag.Pad => Seq((p, xpos))
+    case compose: LineFrag.Compose => compose.frags.flatMap(a => a.flattenAtomics(xpos + a.left))
   }
 
-  private def pointedText0(xpos: Float): (LineFrag.Text, Float) = {
-    val tokens = flattenTexts(0)
-    tokens.find(a => a._2 <= xpos && a._2 + a._1.size.width > xpos) match {
-      case Some(value) => value
-      case None =>
-        tokens.map(a => {
-          val dis = Math.abs(a._2 - xpos) min Math.abs(a._1.size.width + a._2 - xpos)
-          (dis, a)
-        }).minBy(_._1)._2
+  def flattenTexts(xpos: Float): Seq[(LineFrag.Text, Float, Boolean)] = {
+    val res = flattenAtomics(xpos)
+    val a = mutable.ArrayBuffer[(LineFrag.Text, Float, Boolean)]()
+    for (r <- res) {
+      r._1 match {
+        case text: LineFrag.Text =>
+          a.append((text, r._2, false))
+        case pad: LineFrag.Pad =>
+          if (a.nonEmpty) {
+            a.update(a.size - 1, a(a.size - 1).copy(_3 = true))
+          }
+      }
     }
+    a.toSeq
+  }
+
+  // prefer a editable cell
+  private def pointedText0(xpos: Float): (LineFrag.Text, LineFrag.Text, Float, LineFrag.Text) = {
+    val tokens = flattenTexts(0)
+    var index = tokens.indexWhere(a => a._2 <= xpos && a._2 + a._1.size.width > xpos)
+    if (index < 0) {
+      index = tokens.zipWithIndex.map(a0 => {
+        val a = a0._1
+        val dis = Math.abs(a._2 - xpos) min Math.abs(a._1.size.width + a._2 - xpos)
+        (dis, a0._2)
+      }).minBy(_._1)._2
+    }
+    val tk = tokens(index)
+    (if (index == 0 || tokens(index - 1)._3) null else tokens(index - 1)._1,
+        tk._1, tk._2,
+        if (index == tokens.size - 1 || tk._3) null else tokens(index + 1)._1)
   }
 
   def pointedPos(xpos: Float): (LineFrag.Text, Int) = {
-    val (t, x) = pointedText0(xpos)
+    val (before, t, x, after) = pointedText0(xpos)
     val pos = if (xpos <= x) {
       0
     } else if (x + t.size.width < xpos) {
@@ -178,16 +201,36 @@ sealed trait LineFrag extends Frag {
       }
       res
     }
-    (t, pos)
+    var res = (t, pos)
+    if (pos == 0) {
+      val beforeEditable = before != null && before.editable
+      if (t.editable) {
+        if (beforeEditable) warn("This is a ambiguous insertion point")
+      } else {
+        if (beforeEditable) res = (before, before.text.size)
+      }
+    } else if (pos == t.text.size) {
+      val afterEditable = after != null && after.editable
+      if (t.editable) {
+        if (afterEditable) warn("This is a ambiguous insertion point")
+      } else {
+        if (afterEditable) res = (after, 0)
+      }
+    }
+    res
   }
 
   def pointedText(xpos: Float): LineFrag.Text = {
-    pointedText0(xpos)._1
+    pointedText0(xpos)._2
   }
 }
 object LineFrag {
 
-  class Text(val text: String, val style: TextStyle, pad: Float = 0) extends LineFrag {
+  sealed trait Atomic extends LineFrag
+
+  class Text(val text: String, val style: TextStyle, pad: Float = 0) extends Atomic {
+    def editable: Boolean = node != null && node.editable
+
     // TODO use codepoint index, or even better grapheme index
     def measurePrefix(small: Int): Float =
       if (small == 0) 0
@@ -212,7 +255,7 @@ object LineFrag {
       canvas.draw(text, style, pad, measure.y)
   }
 
-  class Pad(val width: Float) extends LineFrag {
+  class Pad(val width: Float) extends Atomic {
     val measure: TextMeasure = TextMeasure(width, 0, 0)
     override def render(canvas: Canvas): Unit = {}
     def count = 0

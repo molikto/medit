@@ -7,6 +7,7 @@ import scala.annotation.Annotation
 object utils {
 
   def debug(a: => String) = println(a)
+  def warn(a: => String) = println(a)
 
   class nullable extends Annotation
 

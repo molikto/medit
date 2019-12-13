@@ -22,6 +22,8 @@ sealed trait Node {
   def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else logicError()
   def childs: Seq[Node]
 
+  def editable = this.isInstanceOf[Node.StringLeaf]
+
   def tryDelete(last: Int) = false
   def tryNewChild(): Int = -1
   def editAppend(c: Int, small: Int): Unit = logicError()
@@ -54,7 +56,7 @@ sealed trait Node {
   @nullable def pointedPos(xpos: Float, ypos: Float): Mode.Insert = {
     val (f, ii) = frag.pointedPos(xpos, ypos)
     val (n, i) = f.parentNodeWithRelativeIndex()
-    Mode.Insert(reverse(n), i, n.isInstanceOf[Node.StringLeaf], ii, f.text.size)
+    Mode.Insert(reverse(n), i, n.editable, ii, f.text.size)
   }
 
   @nullable def pointedText(xpos: Float, ypos: Float): Mode.Frag = {
@@ -234,7 +236,7 @@ object Node {
           new LineFrag.Text(name, TextStyle.keyword)
         case Template.Separator(name) =>
           val style = TextStyle.delimiters
-          val unit = style.unit.width / 3
+          val unit = style.unit.width / 4F
           // we cannot use LineFrag.Pad here, as they create extra insertion point
           new LineFrag.Text(name, TextStyle.delimiters, unit)
         case Template.Pad | Template.LeftPad | Template.RightPad  =>

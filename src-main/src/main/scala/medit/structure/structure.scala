@@ -13,6 +13,8 @@ object StructureException {
   case class FieldNotAllowedHere() extends StructureException
   case class DuplicateFieldInTemplate() extends StructureException
   case class DuplicateName() extends StructureException
+  case class EmptyName() extends StructureException
+  case class BlankConstants() extends StructureException
 
   case class UnknownReference() extends StructureException
 }
@@ -88,13 +90,16 @@ sealed trait Type {
   def name: String
   def check(types: Seq[Type]) = this match {
     case record: Type.Record =>
+      if (record.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(record.fields.map(_.name))) throw StructureException.DuplicateName()
       record.fields.foreach(_.tag.check(types))
       record.template.foreach(_.check(record.fields))
       record.defaultTemplate.check(record.fields)
     case sum: Type.Sum =>
+      if (sum.cases.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(sum.cases.map(_.name))) throw StructureException.DuplicateName()
       sum.cases.foreach(a => {
+        if (a.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
         if (!utils.unique(a.fields.map(_.name))) throw StructureException.DuplicateName()
         a.fields.foreach(_.tag.check(types))
         a.template.foreach(_.check(a.fields))
@@ -139,7 +144,14 @@ sealed trait Template {
           // because then the field will be repeated in node
           sep.foreach(a => rec(a, allowField = false))
           b2.foreach(a => rec(a))
-        case _ =>
+        case Template.Keyword(str) =>
+          if (str.isEmpty) throw StructureException.BlankConstants()
+        case Template.Delimiter(str) =>
+          if (str.isEmpty) throw StructureException.BlankConstants()
+        case Template.Separator(str) =>
+          if (str.isEmpty) throw StructureException.BlankConstants()
+        case Template.Pad | Template.LeftPad | Template.RightPad =>
+
       }
     }
     rec(this)
@@ -174,6 +186,7 @@ object Template {
   case class Delimiter(str: String) extends Template
   @upickle.implicits.key("separator")
   case class Separator(str: String) extends Template
+  // TODO pads and seperators has different insertion point behaviour, but this is fine? MPS is similar
   @upickle.implicits.key("pad")
   case object Pad extends Template
   @upickle.implicits.key("left_pad")
@@ -207,6 +220,7 @@ object Type {
 
 case class Language(types: Seq[Type], root: TypeTag) {
   /** MEDIT_EXTRA_START **/
+  if (types.exists(_.name.isEmpty)) throw StructureException.EmptyName()
   if (!utils.unique(types.map(_.name))) throw StructureException.DuplicateName()
   types.foreach(_.check(types))
   root.check(types)
