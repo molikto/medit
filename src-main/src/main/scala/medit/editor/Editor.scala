@@ -7,7 +7,6 @@ import medit.utils.nullable
 
 class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) extends Mover {
 
-
   // states
   protected val root = Node.create(null, language, language.root, data)
   protected var focus: Seq[Int] = Seq(0)

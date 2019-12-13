@@ -12,8 +12,7 @@ lazy val `main` = crossProject(JSPlatform, JVMPlatform)
   )
 ).jvmSettings(
   libraryDependencies ++= Seq(
-    "com.lihaoyi" %%% "upickle" % "0.8.0",
-    "org.scala-lang.modules" %%% "scala-parser-combinators" % "1.1.2"
+    "com.lihaoyi" %%% "upickle" % "0.8.0"
   )
 )
 
@@ -45,7 +44,6 @@ val sharedSettings = Seq(
 //    "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
 //    Resolver.jcenterRepo,
 //    Resolver.sonatypeRepo("releases"),
-    // "jitpack" at "https://jitpack.io" // this is for the custom built parser combinator library
   ),
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
