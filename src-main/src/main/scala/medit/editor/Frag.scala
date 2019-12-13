@@ -61,15 +61,25 @@ sealed trait Frag {
     }
   }
 
-  def pointedText(xpos: Float, ypos: Float): LineFrag.Text = {
+  def pointedLine(xpos: Float, ypos: Float): (LineFrag, Float) = {
     this match {
       case block: Block =>
         // TODO what if there is no document?
         val b = block.frags.find(a => a.top + a.size.height > ypos).getOrElse(block.frags.last)
-        b.pointedText(xpos - b.left, ypos - b.top)
+        b.pointedLine(xpos - b.left, ypos - b.top)
       case l: LineFrag =>
-        l.pointedText(xpos)
+        (l, xpos)
     }
+  }
+
+  def pointedPos(xpos: Float, ypos: Float): (LineFrag.Text, Int) = {
+    val (l, x) = pointedLine(xpos, ypos)
+    l.pointedPos(x)
+  }
+
+  def pointedText(xpos: Float, ypos: Float): LineFrag.Text = {
+    val (l, x) = pointedLine(xpos, ypos)
+    l.pointedText(x)
   }
 
   def parentNode(): Node = {
@@ -122,24 +132,75 @@ sealed trait LineFrag extends Frag {
     case compose: LineFrag.Compose => compose.frags.flatMap(a => a.flattenTexts(xpos + a.left))
   }
 
-  def pointedText(xpos: Float): LineFrag.Text = {
+  private def pointedText0(xpos: Float): (LineFrag.Text, Float) = {
     val tokens = flattenTexts(0)
     tokens.find(a => a._2 <= xpos && a._2 + a._1.size.width > xpos) match {
-      case Some(value) => value._1
+      case Some(value) => value
       case None =>
         tokens.map(a => {
-         val dis = Math.abs(a._2 - xpos) min Math.abs(a._1.size.width + a._2 - xpos)
-          (dis, a._1)
+          val dis = Math.abs(a._2 - xpos) min Math.abs(a._1.size.width + a._2 - xpos)
+          (dis, a)
         }).minBy(_._1)._2
     }
+  }
+
+  def pointedPos(xpos: Float): (LineFrag.Text, Int) = {
+    val (t, x) = pointedText0(xpos)
+    val pos = if (xpos <= x) {
+      0
+    } else if (x + t.size.width < xpos) {
+      t.text.length
+    } else {
+      var res = -1
+      var i = 1
+      var pdiff = xpos - x
+      while (i < t.text.length && res == -1) {
+        val diff = xpos - x - t.measurePrefix(i)
+        if (diff == 0) {
+          res = i
+        } else if (diff < 0) {
+          if (pdiff > -diff) {
+            res = i
+          } else {
+            res = i - 1
+          }
+        } else {
+          pdiff = diff
+        }
+        i += 1
+      }
+      if (res == -1) {
+        if (Math.abs(xpos - x - t.size.width) < pdiff) {
+          res = t.text.length
+        } else {
+          res = t.text.length - 1
+        }
+      }
+      res
+    }
+    (t, pos)
+  }
+
+  def pointedText(xpos: Float): LineFrag.Text = {
+    pointedText0(xpos)._1
   }
 }
 object LineFrag {
 
-  class Text(val text: String, val style: TextStyle) extends LineFrag {
+  class Text(val text: String, val style: TextStyle, pad: Float = 0) extends LineFrag {
     // TODO use codepoint index, or even better grapheme index
-    def measurePrefix(small: Int): Float = style.measure(text.take(small)).width
-    val measure = style.measure(text)
+    def measurePrefix(small: Int): Float =
+      if (small == 0) 0
+      else if (small == text.size) measure.width
+      else style.measure(text.take(small)).width + pad
+    val measure = {
+      val res = style.measure(text)
+      if (pad == 0) {
+        res
+      } else {
+        res.copy(width = res.width + pad * 2)
+      }
+    }
     def count = 1
     def width = measure.width
 
@@ -148,9 +209,9 @@ object LineFrag {
     }
 
     override def render(canvas: Canvas): Unit =
-      canvas.draw(text, style, 0, measure.y)
-
+      canvas.draw(text, style, pad, measure.y)
   }
+
   class Pad(val width: Float) extends LineFrag {
     val measure: TextMeasure = TextMeasure(width, 0, 0)
     override def render(canvas: Canvas): Unit = {}
@@ -158,7 +219,6 @@ object LineFrag {
   }
   class Compose(override val frags: Seq[LineFrag]) extends LineFrag with HasChildFrag {
     val width: Float = frags.map(_.width).sum
-
 
     lazy val measure: TextMeasure = {
       var y = 0F

@@ -51,10 +51,16 @@ sealed trait Node {
     }
   }
 
-  @nullable def pointedText(xpos: Float, ypos: Float): (Seq[Int], Int) = {
+  @nullable def pointedPos(xpos: Float, ypos: Float): Mode.Insert = {
+    val (f, ii) = frag.pointedPos(xpos, ypos)
+    val (n, i) = f.parentNodeWithRelativeIndex()
+    Mode.Insert(reverse(n), i, n.isInstanceOf[Node.StringLeaf], ii, f.text.size)
+  }
+
+  @nullable def pointedText(xpos: Float, ypos: Float): Mode.Frag = {
     val f = frag.pointedText(xpos, ypos)
     val (n, i) = f.parentNodeWithRelativeIndex()
-    (reverse(n), i)
+    Mode.Frag(reverse(n), i)
   }
 
 
@@ -229,9 +235,8 @@ object Node {
         case Template.Separator(name) =>
           val style = TextStyle.delimiters
           val unit = style.unit.width / 3
-          val pad1 = new LineFrag.Pad(unit)
-          val pad2 = new LineFrag.Pad(unit)
-          new LineFrag.Compose(Seq(pad1, new LineFrag.Text(name, TextStyle.delimiters), pad2))
+          // we cannot use LineFrag.Pad here, as they create extra insertion point
+          new LineFrag.Text(name, TextStyle.delimiters, unit)
         case Template.Pad | Template.LeftPad | Template.RightPad  =>
           new LineFrag.Pad(TextStyle.delimiters.unit.width)
         case Template.Delimiter(str) =>

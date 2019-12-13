@@ -9,12 +9,15 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 
   // states
   protected val root = Node.create(null, language, language.root, data)
-  protected var mode: Mode = Mode.Frag(Seq.empty, 0)
+  protected var mode: Mode = null
 
   def render(canvas: Canvas, width: Int, height: Int): Unit = {
     val timeStart = System.currentTimeMillis()
     root.layout(width, false)
     val hack = root.frag.size
+    if (mode == null) {
+      mode = root.pointedPos(0, 0)
+    }
     val timeLayout = System.currentTimeMillis()
     canvas.save()
     canvas.translate(scrollX.toFloat, scrollY.toFloat)
@@ -52,16 +55,13 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   // press 1, release 0
   def onMouse(button: Int, press: Int, mods: Mods, xpos: Double, ypos: Double): Unit = {
     if (button == 0 && press == 1) {
-      val r = root.pointedText((xpos - scrollX).toFloat, (ypos - scrollY).toFloat)
-      if (r != null) {
-        mode = Mode.Frag(r._1, r._2)
-      }
+      mode = root.pointedPos((xpos - scrollX).toFloat, (ypos - scrollY).toFloat)
     }
   }
 
   def onChar(codepoint: Codepoint, mods: Mods): Unit = mode match {
-    case Mode.Frag(node, pos) =>
-      codepoint.toChar match {
+//    case Mode.Frag(node, pos) =>
+//      codepoint.toChar match {
 //        case 'u' =>
 ////          if (focus.nonEmpty) focus = focus.dropRight(1)
 //        case 'd' =>
@@ -89,11 +89,11 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 ////              case _ =>
 ////            }
 ////          }
-        case 'i' =>
-          val (tn, _)= root.get(node, pos)
-          if (tn.node != null) {
-            mode = Mode.Insert(node, pos, true, 0, tn.text.size)
-          }
+//        case 'i' =>
+//          val (tn, _)= root.get(node, pos)
+//          if (tn.node != null) {
+//            mode = Mode.Insert(node, pos, true, 0, tn.text.size)
+//          }
 //        case 'j' =>
 //          //visualDown(focus).foreach(focus = _)
 //        case 'k' =>
@@ -106,12 +106,12 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 //        case 's' =>
 //          save(root.save())
 //        case _ =>
-      }
+      //}
     case Mode.Insert(node, pos, editable, small, total) =>
       if (editable) {
         if (codepoint == ' ') {
           root(node).editCommit()
-          mode = Mode.Frag(node, 0)
+          //mode = Mode.Frag(node, 0)
         } else {
           root(node).editAppend(codepoint, small)
           mode = Mode.Insert(node, pos, editable, small + 1, total + 1)
@@ -123,7 +123,6 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     // TODO implement repeat keys
     if (action == 1) {
       mode match {
-        case Mode.Frag(node, pos) =>
         case Mode.Insert(node, pos, editable, small, total) =>
           if (key == Key.Backspace) {
             if (editable) {
