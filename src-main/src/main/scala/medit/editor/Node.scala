@@ -232,9 +232,7 @@ object Node {
           val pad1 = new LineFrag.Pad(unit)
           val pad2 = new LineFrag.Pad(unit)
           new LineFrag.Compose(Seq(pad1, new LineFrag.Text(name, TextStyle.delimiters), pad2))
-        case Template.RightPad  =>
-          new LineFrag.Pad(TextStyle.delimiters.unit.width)
-        case Template.LeftPad  =>
+        case Template.Pad | Template.LeftPad | Template.RightPad  =>
           new LineFrag.Pad(TextStyle.delimiters.unit.width)
         case Template.Delimiter(str) =>
           new LineFrag.Text(str, TextStyle.delimiters)

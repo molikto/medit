@@ -167,8 +167,7 @@
               "str": "case"
             },
             {
-              "$type": "delimiter",
-              "str": " "
+              "$type": "pad"
             },
             {
               "$type": "field",
@@ -275,8 +274,7 @@
                   "str": "record"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": " "
+                  "$type": "pad"
                 },
                 {
                   "$type": "field",
@@ -343,16 +341,14 @@
                   "str": "sum"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": " "
+                  "$type": "pad"
                 },
                 {
                   "$type": "field",
                   "name": "name"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": " "
+                  "$type": "pad"
                 }
               ],
               "b1": [
@@ -486,6 +482,14 @@
           ],
           "template": [
             
+          ]
+        },
+        {
+          "name": "pad",
+          "fields": [
+          ],
+          "template": [
+
           ]
         },
         {
