@@ -30,15 +30,27 @@ sealed trait Node {
   def editCommit(): Unit = logicError()
 
 
-//  def findAt(xpos: Float, ypos: Float): Option[Seq[Int]] = {
-//    if (xpos >= 0 && xpos <= size.width && ypos >= 0 && ypos <= size.height) {
-//      val res = childs.map(c => c.findAt(xpos - c.left, ypos - c.top))
-//          .zipWithIndex.find(_._1.nonEmpty).map(a => a._2 +: a._1.get).getOrElse(Seq.empty)
-//      Some(res)
-//    } else {
-//      None
-//    }
-//  }
+  def reverse(f: Node): Seq[Int] = {
+    def rec(f: Node, acc: Seq[Int]): Seq[Int] = {
+      if (f == this) {
+        acc
+      } else {
+        val p = f.parent
+        val i = p.childs.indexOf(f)
+        rec(p, i +: acc)
+      }
+    }
+    rec(f, Seq.empty)
+  }
+
+  @nullable def reverse(xpos: Float, ypos: Float): Seq[Int] = {
+    val f = frag.reverse(xpos, ypos)
+    if (f != null) {
+      reverse(f.nodeEnclosing())
+    } else {
+      null
+    }
+  }
 
   def rect(focus: Seq[Int]): Rect = {
     var left = 0F
@@ -60,12 +72,19 @@ sealed trait Node {
   }
 
   var frag: Frag = null
+  var fragWidth: Float = -1
+  var fragForceLinear: Boolean = false
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
   def layout(width: Float, forceLinear: Boolean): Frag = {
-    if (frag != null) frag.node = null
-    frag = doLayout(width, forceLinear)
-    frag.node = this
+    if (frag != null && (fragWidth != width || fragForceLinear != forceLinear)) {
+      frag.node = null
+      frag = null
+    }
+    if (frag == null) {
+      frag = doLayout(width, forceLinear)
+      if (frag.node == null) frag.node = this
+    }
     frag
   }
 
@@ -187,10 +206,10 @@ object Node {
             endFrag
           }
         }
-        new Block.Compose(0, Seq(
-          new Block.Line(leftFrag1),
-          new Block.Compose(Node.DefaultIndent, cs.map(_.wrap())),
-          new Block.Line(endFrag1)
+        new Block(0, Seq(
+          leftFrag1,
+          new Block(Node.DefaultIndent, cs),
+          endFrag1
         ))
       }
     }

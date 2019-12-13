@@ -5,8 +5,6 @@ import medit.structure.{Data, Language}
 import medit.input._
 import medit.utils.nullable
 
-import scala.collection.mutable.ArrayBuffer
-
 class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) extends Mover {
 
 
@@ -16,9 +14,24 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   @nullable var editMode: Node = null
 
   def render(canvas: Canvas, width: Int, height: Int): Unit = {
+    val timeStart = System.currentTimeMillis()
     root.layout(width, false)
+    val hack = root.frag.size
+    val timeLayout = System.currentTimeMillis()
+    canvas.save()
+    canvas.translate(0, scrollY.toFloat)
     canvas.draw(root.rect(focus), ShapeStyle.cursor)
     root.render(canvas)
+    canvas.restore()
+    val timeDraw = System.currentTimeMillis()
+
+    val layoutStr = s"${timeLayout - timeStart} layout time"
+    val layoutMeasure = TextStyle.delimiters.measure(layoutStr)
+    canvas.draw(layoutStr, TextStyle.delimiters, width - layoutMeasure.width, layoutMeasure.y)
+
+    val drawStr = s"${timeDraw - timeLayout} draw time"
+    val drawMeasure = TextStyle.delimiters.measure(drawStr)
+    canvas.draw(drawStr, TextStyle.delimiters, width - drawMeasure.width, drawMeasure.y + layoutMeasure.y + layoutMeasure.my)
   }
 
   var scrollX = 0.0
@@ -34,9 +47,8 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   // press 1, release 0
   def onMouse(button: Int, press: Int, mods: Mods, xpos: Double, ypos: Double): Unit = {
     if (button == 0 && press == 1) {
-//      root.findAt((xpos - scrollX).toFloat, (ypos - scrollY).toFloat).foreach { a =>
-//        focus = a
-//      }
+      val r = root.reverse((xpos - scrollX).toFloat, (ypos - scrollY).toFloat)
+      if (r != null) focus = r
     }
   }
 

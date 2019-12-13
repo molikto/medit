@@ -221,8 +221,6 @@ class Window extends Canvas {
   var shapes: Shapes = null
 
 
-  var lastFrameTime = 0L
-
 
   override def draw(text: String, style: TextStyle, left: Float, top: Float): Unit = {
     val paint = paints.text
@@ -258,13 +256,8 @@ class Window extends Canvas {
   }
 
   def render(): Unit = {
-    val start = System.currentTimeMillis()
     glClear(GL_COLOR_BUFFER_BIT)
     editor.render(this, windowSize._1, windowSize._2)
-    lastFrameTime = System.currentTimeMillis() - start
-    val str = lastFrameTime.toString
-    val measure = TextStyle.delimiters.measure(str)
-    draw(str, TextStyle.delimiters, measure.y, windowSize._1 - measure.width)
   }
 
   def renderTest() = {
