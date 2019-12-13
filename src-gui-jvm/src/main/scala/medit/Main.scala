@@ -60,9 +60,16 @@ class Shapes {
 object Window {
   lazy val glinterface = gr_glinterface_create_native_interface()
   draw.impl = new Impl()
+  var paints: Paints = null
+  var shapes: Shapes = null
+  def init(): Unit = {
+    paints = new Paints()
+    shapes = new Shapes()
+  }
 }
 
 class Window extends Canvas {
+  import Window._
   private var window = 0L
 
   var windowSize: (Int, Int) = (840, 1400)
@@ -187,8 +194,7 @@ class Window extends Canvas {
   val rgb = 43f / 255
   glClearColor(rgb, rgb, rgb, 1.0f)
   glViewport(0, 0, frameBufferSize._1, frameBufferSize._2)
-  paints = new Paints()
-  shapes = new Shapes()
+  init()
 
   editor = new Editor(
     Language.parse(utils.read("language-meta.json")),
@@ -215,10 +221,6 @@ class Window extends Canvas {
   glfwSetErrorCallback(null).free()
 
   var editor: Editor = null
-
-  var paints: Paints = null
-
-  var shapes: Shapes = null
 
 
 
