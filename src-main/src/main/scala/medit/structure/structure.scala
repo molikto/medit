@@ -134,6 +134,8 @@ sealed trait Template {
           if (f.index == -1) throw StructureException.UnknownField()
           if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
           remaining.remove(f.name)
+        case Template.Compose(content) =>
+          content.foreach(a => rec(a))
         case Template.Tree(left, b1, content, sep, b2) =>
           content match {
             case Seq(f@Template.Unfold(_)) =>
@@ -208,9 +210,11 @@ object Template {
   //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
   case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
+  @upickle.implicits.key("compose")
+  case class Compose(content: Seq[Template]) extends Template
 
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad.type], macroRW[RightPad.type], macroRW[Pad.type])
+  implicit val rw: RW[Template] = RW.merge(macroRW[Compose], macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad.type], macroRW[RightPad.type], macroRW[Pad.type])
 
 }
 

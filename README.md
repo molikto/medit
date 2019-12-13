@@ -71,6 +71,7 @@ then we add ways to resolve insert point from mouse.
 
 * TODO
    * handle all insertion points
+      * what user types? separators, delimiters, keyword, choice, const
    * handle keyword choice
    * handle reference
 

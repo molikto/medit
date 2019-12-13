@@ -98,11 +98,6 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 //          //visualDown(focus).foreach(focus = _)
 //        case 'k' =>
 //          //visualUp(focus).foreach(focus = _)
-//        case 'a' =>
-////          val index = root(focus).tryNewChild()
-////          if (index >= 0) {
-////            focus = focus :+ index
-////          }
 //        case 's' =>
 //          save(root.save())
 //        case _ =>

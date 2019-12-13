@@ -245,6 +245,8 @@ object Node {
           new LineFrag.Text(str, TextStyle.delimiters)
         case f: Template.Field =>
           childs(f.index).layout(width, forceLinear)
+        case Template.Compose(content) =>
+          layoutLinear(content)
         case Template.Unfold(c) =>
           logicError()
         case Template.Tree(left, b1, content, sep, b2) =>
