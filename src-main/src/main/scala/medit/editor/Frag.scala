@@ -94,6 +94,10 @@ object LineFrag {
   }
 }
 
+//class Compose(before: LineFrag, center: Frag, after: LineFrag) extends Frag {
+//
+//}
+
 class Block(val pad: Float, override val frags: Seq[Frag]) extends Frag {
   lazy val size: Size = if (frags.isEmpty) Size.unit else {
     var height = 0F

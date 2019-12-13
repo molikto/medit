@@ -19,7 +19,7 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     val hack = root.frag.size
     val timeLayout = System.currentTimeMillis()
     canvas.save()
-    canvas.translate(0, scrollY.toFloat)
+    canvas.translate(scrollX.toFloat, scrollY.toFloat)
     canvas.draw(root.rect(focus), ShapeStyle.cursor)
     root.render(canvas)
     canvas.restore()
@@ -39,7 +39,7 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 
   // TODO why this scroll is so small compared with other app??
   def onScroll(xoffset: Double, yoffset: Double): Unit = {
-    scrollX += xoffset
+    //scrollX += xoffset
     scrollY += yoffset
   }
 
