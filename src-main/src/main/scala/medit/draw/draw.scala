@@ -59,6 +59,9 @@ object Position {
   val unit = Position(0, 0)
 }
 case class Rect(left: Float, top: Float, width: Float, height: Float) {
+  def leftTop: Position = Position(left, top)
+
+
   def contains(xpos: Float, ypos: Float): Boolean = {
     xpos >= left && xpos <= left + width && ypos >= top && ypos <= top + height
   }

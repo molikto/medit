@@ -3,7 +3,7 @@ package medit.editor
 import medit.{draw, editor}
 import medit.draw.{Position, Rect, Size, TextMeasure, TextStyle}
 import medit.structure.Template.{LeftPad, RightPad}
-import medit.structure.{Data, Language, NameTypeTag, Template, Type, TypeTag}
+import medit.structure.{Language, NameTypeTag, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
@@ -29,7 +29,6 @@ sealed trait Node {
   def editBackspace(): Unit = logicError()
   def editCommit(): Unit = logicError()
 
-
   def reverse(f: Node): Seq[Int] = {
     def rec(f: Node, acc: Seq[Int]): Seq[Int] = {
       if (f == this) {
@@ -43,13 +42,26 @@ sealed trait Node {
     rec(f, Seq.empty)
   }
 
-  @nullable def reverse(xpos: Float, ypos: Float): Seq[Int] = {
-    val f = frag.reverse(xpos, ypos)
+  @nullable def nodeEnclosing(xpos: Float, ypos: Float): Seq[Int] = {
+    val f = frag.fragEnclosing(xpos, ypos)
     if (f != null) {
-      reverse(f.nodeEnclosing())
+      val node = f.parentNode()
+      reverse(node)
     } else {
       null
     }
+  }
+
+  @nullable def pointedText(xpos: Float, ypos: Float): (Seq[Int], Int) = {
+    val f = frag.pointedText(xpos, ypos)
+    val (n, i) = f.parentNodeWithRelativeIndex()
+    (reverse(n), i)
+  }
+
+
+  def rect(focus: Seq[Int], index: Int): Rect = {
+    val r = rect(focus)
+    apply(focus).frag.rect(index) + r.leftTop
   }
 
   def rect(focus: Seq[Int]): Rect = {
@@ -57,11 +69,7 @@ sealed trait Node {
     var top = 0F
     var fcs = focus
     var hack = frag.size
-    var f: Frag = null
-    while (f == null) {
-      f = apply(fcs).frag
-      fcs = fcs.dropRight(1)
-    }
+    var f = apply(focus).frag
     val size = f.size
     while (f != frag) {
       left += f.left
