@@ -462,16 +462,6 @@
           "name": "tree",
           "fields": [
             {
-              "name": "left",
-              "tag": {
-                "$type": "arr",
-                "item": {
-                  "$type": "ref",
-                  "name": "template"
-                }
-              }
-            },
-            {
               "name": "b1",
               "tag": {
                 "$type": "arr",

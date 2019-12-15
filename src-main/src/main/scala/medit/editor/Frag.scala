@@ -316,7 +316,7 @@ sealed trait BlockFrag extends Frag {
 object BlockFrag {
 
   class Compose(override val frags: Seq[Frag]) extends BlockFrag with HasChildFrag {
-    assert(frags.nonEmpty)
+    assert(frags.exists(_.isInstanceOf[BlockFrag]))
     lazy val lastLineWidth: Float = {
       val lines = frags.reverse.takeWhile(_.isInstanceOf[LineFrag])
       dependentCast[BlockFrag](frags(frags.size - lines.size - 1)).lastLineWidth + lines.map(_.width).sum
