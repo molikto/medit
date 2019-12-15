@@ -147,7 +147,7 @@ sealed trait Template {
   def check(fields: Seq[NameTypeTag]): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
 
-    def rec(t: Template, allowUnfold: Boolean = false, complex: Boolean = true): Unit = {
+    def rec(t: Template, unfold: Boolean = false, complex: Boolean = true): Unit = {
       t match {
         case s: Template.Simple =>
           s match {
@@ -163,10 +163,9 @@ sealed trait Template {
           if (!complex) throw StructureException.OnlySimple()
           a match {
             case f: Template.FieldRef =>
-              // the editor depends on these, child - field relationship should be one - one
               f match {
                 case Template.Unfold(_) =>
-                  if (!allowUnfold) throw StructureException.UnfoldNotSupported()
+                  if (!unfold) throw StructureException.UnfoldNotSupported()
                 case _ =>
               }
               f.index = fields.indexWhere(_.name == f.name)
@@ -175,7 +174,7 @@ sealed trait Template {
               remaining.remove(f.name)
             case Template.Compose(content) =>
               content.foreach(a => rec(a))
-            case Template.Tree(left, b1, content, sep, b2) =>
+            case Template.Tree(b1, content, sep, b2) =>
               content match {
                 case Seq(f@Template.Unfold(_)) =>
                   rec(f, true)
@@ -187,9 +186,7 @@ sealed trait Template {
                 case _ =>
                   content.foreach(a => rec(a))
               }
-              left.foreach(a => rec(a))
               b1.foreach(a => rec(a, complex = false))
-              // because then the field will be repeated in node
               sep.foreach(a => rec(a, complex = false))
               b2.foreach(a => rec(a, complex = false))
           }
@@ -209,13 +206,15 @@ object Template {
     if (fields.isEmpty) {
       Keyword(name)
     } else {
-      Tree(
-        Seq(Keyword(name)),
-        Seq(Delimiter("(")),
-        fields.map(f => Template.Field(f.name)),
-        Some(Separator(",")),
-        Seq(Delimiter(")"))
-      )
+      Compose(Seq(
+        Keyword(name),
+        Tree(
+          Seq(Delimiter("(")),
+          fields.map(f => Template.Field(f.name)),
+          Some(Separator(",")),
+          Seq(Delimiter(")"))
+        )
+      ))
     }
   }
 
@@ -256,7 +255,7 @@ object Template {
 
   //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
-  case class Tree(left: Seq[Template], b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
+  case class Tree(b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
 
   @upickle.implicits.key("compose")
   case class Compose(content: Seq[Template]) extends Template

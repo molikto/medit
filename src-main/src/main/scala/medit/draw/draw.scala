@@ -50,6 +50,9 @@ case class TextMeasure(width: Float, my: Float, y: Float) {
   def *(a: Int) = TextMeasure(width * a, my, y)
   def +(y: TextMeasure): TextMeasure = TextMeasure(width + y.width, my max y.my, this.y max y.y)
 }
+object TextMeasure {
+  val empty = TextMeasure(0, 0, 0)
+}
 
 case class Position(left: Float, top: Float) {
   def +(p: Position) = Position(left + p.left, top + p.top)

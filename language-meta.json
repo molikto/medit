@@ -157,8 +157,8 @@
       ],
       "template": [
         {
-          "$type": "tree",
-          "left": [
+          "$type": "compose",
+          "content": [
             {
               "$type": "keyword",
               "str": "case"
@@ -169,34 +169,37 @@
             {
               "$type": "field",
               "name": "name"
-            }
-          ],
-          "b1": [
-            {
-              "$type": "delimiter",
-              "str": "("
-            }
-          ],
-          "content": [
-            {
-              "$type": "field",
-              "name": "fields"
             },
             {
-              "$type": "field",
-              "name": "template"
-            }
-          ],
-          "sep": [
-            {
-              "$type": "separator",
-              "str": ","
-            }
-          ],
-          "b2": [
-            {
-              "$type": "delimiter",
-              "str": ")"
+              "$type": "tree",
+              "b1": [
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                }
+              ],
+              "content": [
+                {
+                  "$type": "field",
+                  "name": "fields"
+                },
+                {
+                  "$type": "field",
+                  "name": "template"
+                }
+              ],
+              "sep": [
+                {
+                  "$type": "separator",
+                  "str": ","
+                }
+              ],
+              "b2": [
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
             }
           ]
         }
@@ -265,8 +268,8 @@
           ],
           "template": [
             {
-              "$type": "tree",
-              "left": [
+              "$type": "compose",
+              "content": [
                 {
                   "$type": "keyword",
                   "str": "record"
@@ -277,34 +280,37 @@
                 {
                   "$type": "field",
                   "name": "name"
-                }
-              ],
-              "b1": [
-                {
-                  "$type": "delimiter",
-                  "str": "("
-                }
-              ],
-              "content": [
-                {
-                  "$type": "field",
-                  "name": "fields"
                 },
                 {
-                  "$type": "field",
-                  "name": "template"
-                }
-              ],
-              "sep": [
-                {
-                  "$type": "separator",
-                  "str": ","
-                }
-              ],
-              "b2": [
-                {
-                  "$type": "delimiter",
-                  "str": ")"
+                  "$type": "tree",
+                  "b1": [
+                    {
+                      "$type": "delimiter",
+                      "str": "("
+                    }
+                  ],
+                  "content": [
+                    {
+                      "$type": "field",
+                      "name": "fields"
+                    },
+                    {
+                      "$type": "field",
+                      "name": "template"
+                    }
+                  ],
+                  "sep": [
+                    {
+                      "$type": "separator",
+                      "str": ","
+                    }
+                  ],
+                  "b2": [
+                    {
+                      "$type": "delimiter",
+                      "str": ")"
+                    }
+                  ]
                 }
               ]
             }
@@ -333,8 +339,8 @@
           ],
           "template": [
             {
-              "$type": "tree",
-              "left": [
+              "$type": "compose",
+              "content": [
                 {
                   "$type": "keyword",
                   "str": "sum"
@@ -348,36 +354,39 @@
                 },
                 {
                   "$type": "pad"
-                }
-              ],
-              "b1": [
-                {
-                  "$type": "delimiter",
-                  "str": "{"
                 },
                 {
-                  "$type": "right_pad"
-                }
-              ],
-              "content": [
-                {
-                  "$type": "unfold",
-                  "name": "cases"
-                }
-              ],
-              "sep": [
-                {
-                  "$type": "separator",
-                  "str": ";"
-                }
-              ],
-              "b2": [
-                {
-                  "$type": "left_pad"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": "}"
+                  "$type": "tree",
+                  "b1": [
+                    {
+                      "$type": "delimiter",
+                      "str": "{"
+                    },
+                    {
+                      "$type": "right_pad"
+                    }
+                  ],
+                  "content": [
+                    {
+                      "$type": "unfold",
+                      "name": "cases"
+                    }
+                  ],
+                  "sep": [
+                    {
+                      "$type": "separator",
+                      "str": ";"
+                    }
+                  ],
+                  "b2": [
+                    {
+                      "$type": "left_pad"
+                    },
+                    {
+                      "$type": "delimiter",
+                      "str": "}"
+                    }
+                  ]
                 }
               ]
             }
@@ -539,21 +548,6 @@
               "tag": {
                 "$type": "str",
                 "name": "const"
-              }
-            }
-          ],
-          "template": [
-            
-          ]
-        },
-        {
-          "name": "unfold",
-          "fields": [
-            {
-              "name": "name",
-              "tag": {
-                "$type": "str",
-                "name": "reference"
               }
             }
           ],

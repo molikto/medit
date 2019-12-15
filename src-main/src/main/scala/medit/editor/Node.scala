@@ -75,38 +75,40 @@ sealed trait Node {
   def rect(focus: Seq[Int]): Rect = {
     var left = 0F
     var top = 0F
-    var fcs = focus
-    var hack = frag.size
     var f = apply(focus).frag
-    val size = f.size
+    val width = f.width
+    val height = f.height
     while (f != frag) {
       left += f.left
       top += f.top
       f = f.parent
     }
-    Rect(left, top, size.width, size.height)
+    Rect(left, top, width, height)
   }
 
   var frag: Frag = null
   var fragWidth: Float = -1
+  var fragWidthDown: Float = -1
   var fragForceLinear: Boolean = false
 
   // layout will determine itself the size and multiline, then top left is assgined by parent
-  def layout(width: Float, forceLinear: Boolean): Frag = {
-    if (frag != null && (fragWidth != width || fragForceLinear != forceLinear)) {
+  def layout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
+    if (frag != null && (fragWidth != width || fragWidthDown != widthDown || fragForceLinear != forceLinear)) {
       frag.node = null
       frag = null
     }
     if (frag == null) {
-      frag = doLayout(width, forceLinear)
+      frag = doLayout(width, widthDown, forceLinear)
       if (frag.node == null) frag.node = this
     }
     frag
   }
 
+  def measure() = frag.measure(TextMeasure.empty)
+
   def render(canvas: draw.Canvas) = frag.render(canvas)
 
-  protected def doLayout(width: Float, forceLinear: Boolean): Frag
+  protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag
 }
 
 object Node {
@@ -192,16 +194,37 @@ object Node {
     def layoutLinear(left: Seq[Template]) : LineFrag = {
       if (left.isEmpty) {
         new LineFrag.Compose(Seq.empty)
+      } else if (left.size == 1) {
+        dependentCast[LineFrag](layout(left.head, 0, 0, true))
       } else {
-        new LineFrag.Compose(left.map(l => dependentCast[LineFrag](layout(l, 0, true))))
+        new LineFrag.Compose(left.map(l => dependentCast[LineFrag](layout(l, 0, 0, true))))
       }
     }
 
-    @inline def layoutComposite(left: Seq[Template], cs: Seq[Frag], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
+    @inline def layoutCompose(cs: Seq[Template], width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
+      val (all, isBlock, _) = cs.foldLeft((Seq.empty[Frag], false, width - widthDown) : (Seq[Frag], Boolean, Float)) { (acc, c) =>
+        val (prev, isBlock, pad) = acc
+        val res = layout(c, widthDown - pad, widthDown, forceLinear)
+        val next: (Seq[Frag], Boolean, Float) = res match {
+          case line: LineFrag =>
+            (prev :+ res, isBlock, pad + line.width)
+          case a: BlockFrag =>
+            (prev :+ res, true, a.lastLineWidth)
+        }
+        next
+      }
+      if (isBlock) {
+        new BlockFrag.Compose(all)
+      } else {
+        new LineFrag.Compose(all.map(a => dependentCast[LineFrag](a)))
+      }
+    }
+
+    @inline def layoutTree(left: Seq[Template], cs: Seq[Frag], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
       val leftFrag = layoutLinear(left)
       val sepFrag = layoutLinear(sep)
       val endFrag = layoutLinear(end)
-      if (forceLinear || !cs.exists(_.isInstanceOf[Block])
+      if (forceLinear || !cs.exists(_.isInstanceOf[BlockFrag])
           && leftFrag.width + cs.map(a => dependentCast[LineFrag](a).width).sum + sepFrag.width * cs.size + endFrag.width <= width) {
         new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(sep), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
       } else {
@@ -222,15 +245,11 @@ object Node {
             endFrag
           }
         }
-        new Block(0, Seq(
-          leftFrag1,
-          new Block(Node.DefaultIndent, cs),
-          endFrag1
-        ))
+        new BlockFrag.Tree(Node.DefaultIndent, leftFrag1, cs, endFrag1)
       }
     }
 
-    def layout(left: Template, width: Float, forceLinear: Boolean): Frag = {
+    def layout(left: Template, width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       left match {
         case Template.Keyword(name) =>
           new LineFrag.Text(name, TextStyle.keyword)
@@ -244,20 +263,22 @@ object Node {
         case Template.Delimiter(str) =>
           new LineFrag.Text(str, TextStyle.delimiters)
         case f: Template.Field =>
-          childs(f.index).layout(width, forceLinear)
+          childs(f.index).layout(width, widthDown, forceLinear)
         case Template.Compose(content) =>
-          layoutLinear(content)
+          layoutCompose(content, width, widthDown, forceLinear)
         case Template.Unfold(c) =>
           logicError()
-        case Template.Tree(left, b1, content, sep, b2) =>
+        case Template.Tree(b1, content, sep, b2) =>
+          // when measuring childs, we assume that the size avaliable is using widthDown
+          val wd = widthDown - Node.DefaultIndent
           val cons = content match {
             case Seq(f@Template.Unfold(_)) =>
               val c = dependentCast[Collection](childs(f.index))
-              c.childs.map(_.layout(width - Node.DefaultIndent, forceLinear))
+              c.childs.map(_.layout(wd, wd, forceLinear))
             case _ =>
-              content.map(a => layout(a, width - Node.DefaultIndent, forceLinear))
+              content.map(a => layout(a, wd, wd, forceLinear))
           }
-          layoutComposite(left ++ b1, cons, sep.toSeq, b2, width, forceLinear)
+          layoutTree(b1, cons, sep.toSeq, b2, width, forceLinear)
       }
     }
   }
@@ -277,12 +298,15 @@ object Node {
       case record: Type.Record =>
         record.templateOrDefault
       case sum: Type.Sum =>
+        if (index == -1) {
+          logicError()
+        }
         sum.cases(index).templateOrDefault
     }
 
 
-    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
-      layout(template, width, forceLinear)
+    override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
+      layout(template, width, widthDown, forceLinear)
     }
   }
 
@@ -311,12 +335,13 @@ object Node {
     }
 
 
-    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
+    override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       val left = Seq(Template.Delimiter("["))
       val sep = Seq(Template.Separator(","))
       val end = Seq(Template.Delimiter("]"))
-      val cs = childs.map(_.layout(width - Node.DefaultIndent, forceLinear))
-      layoutComposite(left, cs, sep, end, width, forceLinear)
+      val wd = widthDown - Node.DefaultIndent
+      val cs = childs.map(_.layout(wd, wd, forceLinear))
+      layoutTree(left, cs, sep, end, width, forceLinear)
     }
   }
 
@@ -344,7 +369,7 @@ object Node {
 
     def style: TextStyle
 
-    override protected def doLayout(width: Float, forceLinear: Boolean): Frag = {
+    override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       new LineFrag.Text(buffer, style)
     }
   }

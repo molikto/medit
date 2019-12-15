@@ -13,8 +13,8 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
 
   def render(canvas: Canvas, width: Int, height: Int): Unit = {
     val timeStart = System.currentTimeMillis()
-    root.layout(width, false)
-    val hack = root.frag.size
+    root.layout(width, width, false)
+    root.measure()
     if (mode == null) {
       mode = root.pointedPos(0, 0)
     }
