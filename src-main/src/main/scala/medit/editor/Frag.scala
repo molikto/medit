@@ -28,19 +28,20 @@ sealed trait Frag {
   @nullable var node: Node = null // if a node is represented by this frag
 
   @nullable def fragEnclosing(xpos: Float, ypos: Float): Frag = {
-    if (xpos >= 0 && ypos >= 0 && xpos <= size.width && ypos <= size.height) {
-      var i = 0
-      var res: Frag = null
-      while (i < frags.size && res == null) {
-        val f = frags(i)
-        res = f.fragEnclosing(xpos - f.left, ypos - f.top)
-        i += 1
-      }
-      if (res == null) res = this
-      res
-    } else {
-      null
-    }
+//    if (xpos >= 0 && ypos >= 0 && xpos <= size.width && ypos <= size.height) {
+//      var i = 0
+//      var res: Frag = null
+//      while (i < frags.size && res == null) {
+//        val f = frags(i)
+//        res = f.fragEnclosing(xpos - f.left, ypos - f.top)
+//        i += 1
+//      }
+//      if (res == null) res = this
+//      res
+//    } else {
+//      null
+//    }
+    ???
   }
 
   def get(index: Int): (LineFrag.Text, Rect) = {
@@ -69,14 +70,15 @@ sealed trait Frag {
   }
 
   def pointedLine(xpos: Float, ypos: Float): (LineFrag, Float) = {
-    this match {
-      case block: BlockFrag.Stack =>
-        // TODO what if there is no document?
-        val b = block.frags.find(a => a.top + a.size.height > ypos).getOrElse(block.frags.last)
-        b.pointedLine(xpos - b.left, ypos - b.top)
-      case l: LineFrag =>
-        (l, xpos)
-    }
+//    this match {
+//      case block: BlockFrag.Stack =>
+//        // TODO what if there is no document?
+//        val b = block.frags.find(a => a.top + a.size.height > ypos).getOrElse(block.frags.last)
+//        b.pointedLine(xpos - b.left, ypos - b.top)
+//      case l: LineFrag =>
+//        (l, xpos)
+//    }
+    ???
   }
 
   def pointedPos(xpos: Float, ypos: Float): (LineFrag.Text, Int) = {

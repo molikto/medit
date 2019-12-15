@@ -15,20 +15,20 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     val timeStart = System.currentTimeMillis()
     root.layout(width, width, false)
     root.measure()
-    if (mode == null) {
-      mode = root.pointedPos(0, 0)
-    }
+//    if (mode == null) {
+//      mode = root.pointedPos(0, 0)
+//    }
     val timeLayout = System.currentTimeMillis()
     canvas.save()
     canvas.translate(scrollX.toFloat, scrollY.toFloat)
-    mode match {
-      case Mode.Insert(node, pos, _, small, total) =>
-        val (t, rect) = root.get(node, pos)
-        val pre = t.measurePrefix(small)
-        canvas.draw(Rect(rect.left + pre, rect.top, 3, rect.height), ShapeStyle.cursor)
-      case Mode.Frag(node, pos) =>
-        canvas.draw(root.get(node, pos)._2, ShapeStyle.cursor)
-    }
+//    mode match {
+//      case Mode.Insert(node, pos, _, small, total) =>
+//        val (t, rect) = root.get(node, pos)
+//        val pre = t.measurePrefix(small)
+//        canvas.draw(Rect(rect.left + pre, rect.top, 3, rect.height), ShapeStyle.cursor)
+//      case Mode.Frag(node, pos) =>
+//        canvas.draw(root.get(node, pos)._2, ShapeStyle.cursor)
+//    }
     root.render(canvas)
     canvas.restore()
     val timeDraw = System.currentTimeMillis()
