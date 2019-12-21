@@ -191,13 +191,13 @@ object Node {
       }
     }
 
-    @inline def layoutTree(left: Seq[Template], cs: Seq[Frag], sep: Seq[Template], end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
+    @inline def layoutTree(left: Seq[Template], cs: Seq[Frag], sep: Template, end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
       val leftFrag = layoutLinear(left)
-      val sepFrag = layoutLinear(sep)
+      val sepFrag = layoutLinear(Seq(sep))
       val endFrag = layoutLinear(end)
       if (forceLinear || !cs.exists(_.isInstanceOf[BlockFrag])
           && leftFrag.width + cs.map(a => dependentCast[LineFrag](a).width).sum + sepFrag.width * cs.size + endFrag.width <= width) {
-        new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(sep), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
+        new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(Seq(sep)), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
       } else {
         val leftFrag1 = {
           val removedPadding = left.reverse.dropWhile(_ == RightPad).reverse
@@ -220,14 +220,15 @@ object Node {
             pair._1
           } else {
             // FIXME this is a hack, we need to check equality
-            if (pair._1.parent != null) {
+            val parent = pair._1.parent
+            if (parent != null && parent.frags.size == 2 && parent.frags(0) == pair._1 && parent.frags(1).matches(sep)) {
               pair._1.parent
             } else {
               pair._1 match {
                 case frag: BlockFrag =>
-                  new BlockFrag.Compose(Seq(frag, layoutLinear(sep)))
+                  new BlockFrag.Compose(Seq(frag, layoutLinear(Seq(sep))))
                 case frag: LineFrag =>
-                  new LineFrag.Compose(Seq(frag, layoutLinear(sep)))
+                  new LineFrag.Compose(Seq(frag, layoutLinear(Seq(sep))))
               }
             }
           }
@@ -264,7 +265,7 @@ object Node {
             case _ =>
               content.map(a => layout(a, wd, wd, forceLinear))
           }
-          layoutTree(b1, cons, sep.toSeq, b2, width, forceLinear)
+          layoutTree(b1, cons, sep.getOrElse(Template.Compose(Seq.empty)), b2, width, forceLinear)
       }
     }
   }
@@ -323,7 +324,7 @@ object Node {
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       val left = Seq(Template.Delimiter("["))
-      val sep = Seq(Template.Separator(","))
+      val sep = Template.Separator(",")
       val end = Seq(Template.Delimiter("]"))
       val wd = widthDown - Node.DefaultIndent
       val cs = childs.map(_.layout(wd, wd, forceLinear))

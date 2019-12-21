@@ -1,6 +1,7 @@
 package medit.editor
 
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
+import medit.structure.Template
 import medit.utils._
 
 import scala.collection.mutable
@@ -16,6 +17,13 @@ import scala.collection.mutable
  *
  */
 sealed trait Frag {
+  def matches(sep: Template): Boolean = (this, sep) match {
+    case (txt: LineFrag.Text, Template.Separator(str)) =>
+      if (txt.text == str && txt.style == TextStyle.delimiters) true
+      else false
+    case _ => false
+  }
+
   def finish(canvas: LineCanvas): Unit
 
   def frags: Seq[Frag]
