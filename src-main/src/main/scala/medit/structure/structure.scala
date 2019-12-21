@@ -64,7 +64,7 @@ object TypeTag {
   /** MEDIT_EXTRA_END **/
   @upickle.implicits.key("str")
   case class Str(name: String) extends TypeTag {
-    val style = if (name.isEmpty) TextStyle.const else TextStyle.find(name) match {
+    val style = if (name.isEmpty) TextStyle.const else TextStyle.resolve(name) match {
       case Some(a) => a
       case _ => throw StructureException.UnknownTextStyle()
     }

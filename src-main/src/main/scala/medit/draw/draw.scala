@@ -85,7 +85,7 @@ case class TextStyle(color: Int, typeface: Typeface, size: Int) {
 
 
 object TextStyle {
-  def find(A: String): Option[TextStyle] = A match {
+  def resolve(A: String): Option[TextStyle] = A match {
     case "keyword" => Some(keyword)
     case "reference" => Some(reference)
     case "declare" => Some(declare)
@@ -98,7 +98,7 @@ object TextStyle {
   val reference = TextStyle(0xFFb9acbf, Typeface.Mono, 13)
   val declare = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
   val const = TextStyle(0xFF6A8759, Typeface.Mono, 13)
-  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 9)
+  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 13)
   val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)
 }
 
