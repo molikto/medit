@@ -1,7 +1,7 @@
 package medit.editor
 
 import medit.{draw, editor}
-import medit.draw.{Position, Rect, Size, TextMeasure, TextStyle}
+import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
 import medit.structure.Template.{LeftPad, RightPad}
 import medit.structure.{Language, NameTypeTag, Template, Type, TypeTag}
 
@@ -13,7 +13,6 @@ import scala.collection.immutable.{AbstractSeq, LinearSeq}
 
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
-
 
   def save(): ujson.Value
 
@@ -43,56 +42,28 @@ sealed trait Node {
     rec(f, Seq.empty)
   }
 
-  @nullable def nodeEnclosing(xpos: Float, ypos: Float): Seq[Int] = {
-    val f = frag.fragEnclosing(xpos, ypos)
-    if (f != null) {
-      val node = f.parentNode()
-      reverse(node)
-    } else {
-      null
-    }
+
+  def reverse(text: LineFrag.Text): (Seq[Int], Int) = {
+    val (n, i) = text.parentNodeWithRelativeIndex()
+    (reverse(n), i)
   }
 
-  @nullable def pointedPos(xpos: Float, ypos: Float): Mode.Insert = {
-    val (f, ii) = frag.pointedPos(xpos, ypos)
-    val (n, i) = f.parentNodeWithRelativeIndex()
-    Mode.Insert(reverse(n), i, n.editable, ii, f.text.size)
+  def get(focus: Seq[Int], index: Int): LineFrag.Text = {
+    apply(focus).frag.get(index)
   }
 
-  @nullable def pointedText(xpos: Float, ypos: Float): Mode.Frag = {
-    val f = frag.pointedText(xpos, ypos)
-    val (n, i) = f.parentNodeWithRelativeIndex()
-    Mode.Frag(reverse(n), i)
+  def invalidate(): Unit = {
+    frag = null
+    if (_parent != null) _parent.invalidate()
   }
 
-
-  def get(focus: Seq[Int], index: Int): (LineFrag.Text, Rect) = {
-    val r = rect(focus)
-    val (t, rr) = apply(focus).frag.get(index)
-    (t, rr + r.leftTop)
-  }
-
-  def rect(focus: Seq[Int]): Rect = {
-//    var left = 0F
-//    var top = 0F
-//    var f = apply(focus).frag
-//    val width = f.width
-//    val height = f.height
-//    while (f != frag) {
-//      left += f.left
-//      top += f.top
-//      f = f.parent
-//    }
-//    Rect(left, top, width, height)
-    ???
-  }
-
+  // cache invalidation: remember to invalidate parent frag when node content changed
   var frag: Frag = null
   var fragWidth: Float = -1
   var fragWidthDown: Float = -1
   var fragForceLinear: Boolean = false
 
-  // actually, line breaking into frags
+  // calculate frags
   def layout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
     if (frag != null && (fragWidth != width || fragWidthDown != widthDown || fragForceLinear != forceLinear)) {
       frag.node = null
@@ -100,15 +71,13 @@ sealed trait Node {
     }
     if (frag == null) {
       frag = doLayout(width, widthDown, forceLinear)
+      fragWidth = width
+      fragWidthDown = widthDown
+      fragForceLinear = forceLinear
       if (frag.node == null) frag.node = this
     }
     frag
   }
-
-  // given we have determined a frag, measure makes it renderable
-  def measure() = frag.measure()
-
-  def render(canvas: draw.Canvas) = frag.render(canvas)
 
   protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag
 }
@@ -238,7 +207,6 @@ object Node {
             leftFrag
           }
         }
-        // FIXME add seperator
         val endFrag1 = {
           val removedPadding = end.dropWhile(_ == LeftPad)
           if (removedPadding.size != end.size) {
@@ -247,7 +215,23 @@ object Node {
             endFrag
           }
         }
-        new BlockFrag.Tree(Node.DefaultIndent, leftFrag1, cs, endFrag1)
+        new BlockFrag.Tree(Node.DefaultIndent, leftFrag1, cs.zipWithIndex.map(pair => {
+          if (pair._2 == cs.size - 1) {
+            pair._1
+          } else {
+            // FIXME this is a hack, we need to check equality
+            if (pair._1.parent != null) {
+              pair._1.parent
+            } else {
+              pair._1 match {
+                case frag: BlockFrag =>
+                  new BlockFrag.Compose(Seq(frag, layoutLinear(sep)))
+                case frag: LineFrag =>
+                  new LineFrag.Compose(Seq(frag, layoutLinear(sep)))
+              }
+            }
+          }
+        }), endFrag1)
       }
     }
 
@@ -353,10 +337,13 @@ object Node {
     protected var buffer = ""
 
     override def editAppend(c: Int, small: Int): Unit = {
+      invalidate()
       buffer = buffer.take(small) + c.toChar.toString + buffer.drop(small)
     }
 
+
     override def editBackspace(small: Int): Unit = {
+      invalidate()
       buffer = buffer.take(small - 1) + buffer.drop(small)
     }
 

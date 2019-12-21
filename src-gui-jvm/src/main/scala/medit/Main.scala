@@ -295,4 +295,5 @@ class Window extends Canvas {
     sk_paint_delete(stroke)
     sk_paint_delete(fill)
   }
+
 }

@@ -7,37 +7,44 @@ import medit.utils.nullable
 
 class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) extends Mover {
 
+
   // states
   protected val root = Node.create(null, language, language.root, data)
+  private var lines: LineCanvas = null
   protected var mode: Mode = null
 
   def render(canvas: Canvas, width: Int, height: Int): Unit = {
     val timeStart = System.currentTimeMillis()
     root.layout(width, width, false)
-    root.measure()
-//    if (mode == null) {
-//      mode = root.pointedPos(0, 0)
-//    }
+    lines = new LineCanvas()
+    root.frag.finish(lines)
+    lines.break()
+    if (mode == null) {
+      val text = root.frag.get(0)
+      val (node, i) = root.reverse(text)
+      mode = Mode.Insert(node, i, text.editable, 0, text.text.size)
+    }
     val timeLayout = System.currentTimeMillis()
     canvas.save()
     canvas.translate(scrollX.toFloat, scrollY.toFloat)
-//    mode match {
-//      case Mode.Insert(node, pos, _, small, total) =>
-//        val (t, rect) = root.get(node, pos)
-//        val pre = t.measurePrefix(small)
-//        canvas.draw(Rect(rect.left + pre, rect.top, 3, rect.height), ShapeStyle.cursor)
-//      case Mode.Frag(node, pos) =>
-//        canvas.draw(root.get(node, pos)._2, ShapeStyle.cursor)
-//    }
-    root.render(canvas)
+    mode match {
+      case Mode.Insert(node, pos, _, small, _) =>
+        val t = root.get(node, pos)
+        val pre = t.measurePrefix(small)
+        val rect = lines.rect(t.pos)
+        canvas.draw(Rect(rect.left + pre, rect.top, 3, rect.height), ShapeStyle.cursor)
+      case Mode.Frag(node, pos) =>
+        canvas.draw(lines.rect(root.get(node, pos).pos), ShapeStyle.cursor)
+    }
+    lines.render(canvas)
     canvas.restore()
     val timeDraw = System.currentTimeMillis()
 
-    val layoutStr = s"${timeLayout - timeStart} layout time"
+    val layoutStr = s"${timeLayout - timeStart} layout"
     val layoutMeasure = TextStyle.delimiters.measure(layoutStr)
     canvas.draw(layoutStr, TextStyle.delimiters, width - layoutMeasure.width, layoutMeasure.y)
 
-    val drawStr = s"${timeDraw - timeLayout} draw time"
+    val drawStr = s"${timeDraw - timeLayout} draw"
     val drawMeasure = TextStyle.delimiters.measure(drawStr)
     canvas.draw(drawStr, TextStyle.delimiters, width - drawMeasure.width, drawMeasure.y + layoutMeasure.y + layoutMeasure.my)
   }
@@ -55,7 +62,9 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   // press 1, release 0
   def onMouse(button: Int, press: Int, mods: Mods, xpos: Double, ypos: Double): Unit = {
     if (button == 0 && press == 1) {
-      mode = root.pointedPos((xpos - scrollX).toFloat, (ypos - scrollY).toFloat)
+      val (text, ii) = lines.reverse((xpos - scrollX).toFloat, (ypos - scrollY).toFloat)
+      val (node, i) = root.reverse(text)
+      mode = Mode.Insert(node, i, text.editable, ii, text.text.size)
     }
   }
 
