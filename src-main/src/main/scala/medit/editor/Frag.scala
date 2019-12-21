@@ -6,24 +6,42 @@ import medit.utils._
 import scala.collection.mutable
 
 
+/**
+ * properties of line frags:
+ * * width
+ * * height
+ * * baseline
+ *
+ * block frags:
+ *
+ */
 sealed trait Frag {
 
 
   def frags: Seq[Frag]
   def count: Int
 
+  def width: Float
+  def height: Float
+  def intrinsicWidth: Float = width
+  def intrinsicHeight: Float = height
+
   def render(canvas: Canvas): Unit
 
+  // set by parents
   var parent: Frag = null
   var left: Float = 0
   var top: Float = 0
-  def width: Float
-  def height: Float
 
-  final def measure(before: TextMeasure): Unit = {
-    doMeasure(before)
+  private var measured = false
+  final def measure(): Unit = {
+    if (!measured) {
+      measured = true
+      doMeasure()
+    }
   }
-  protected def doMeasure(before: TextMeasure): Unit
+
+  protected def doMeasure(): Unit
 
   @nullable var node: Node = null // if a node is represented by this frag
 
@@ -47,7 +65,7 @@ sealed trait Frag {
   def get(index: Int): (LineFrag.Text, Rect) = {
     this match {
       case frag: LineFrag.Text =>
-        if (index == 0) (frag, Rect(0, 0, width, height))
+        if (index == 0) (frag, Rect(0, 0, frag.width, frag.height))
         else logicError()
       case _ =>
         var i = 0
@@ -118,6 +136,8 @@ sealed trait Frag {
 }
 
 sealed trait HasChildFrag extends Frag {
+  lazy val count: Int = frags.map(_.count).sum
+
   def render(canvas: Canvas): Unit = {
     for (f <- frags) {
       canvas.save()
@@ -126,23 +146,25 @@ sealed trait HasChildFrag extends Frag {
       canvas.restore()
     }
   }
-
-  lazy val count: Int = frags.map(_.count).sum
 }
 
 sealed trait LineFrag extends Frag {
-  def measure: TextMeasure
-  def width: Float = measure.width
-  def height: Float = measure.y + measure.my
+  def textMeasure: TextMeasure
+  def width: Float = textMeasure.width
+  def height: Float = textMeasure.height
 
-  override def doMeasure(before: TextMeasure): Unit = {}
+  override def doMeasure(): Unit = {}
 
+  // TODO take into account of overlapping x-range, for example a/b
+
+  // returns all atomics and x position
   def flattenAtomics(xpos: Float): Seq[(LineFrag.Atomic, Float)] = this match {
     case text: LineFrag.Text => Seq((text, xpos))
     case p: LineFrag.Pad => Seq((p, xpos))
     case compose: LineFrag.Compose => compose.frags.flatMap(a => a.flattenAtomics(xpos + a.left))
   }
 
+  // returns all atomics and x position, removing pads but taking account for their x positions
   def flattenTexts(xpos: Float): Seq[(LineFrag.Text, Float, Boolean)] = {
     val res = flattenAtomics(xpos)
     val a = mutable.ArrayBuffer[(LineFrag.Text, Float, Boolean)]()
@@ -150,7 +172,7 @@ sealed trait LineFrag extends Frag {
       r._1 match {
         case text: LineFrag.Text =>
           a.append((text, r._2, false))
-        case pad: LineFrag.Pad =>
+        case _: LineFrag.Pad =>
           if (a.nonEmpty) {
             a.update(a.size - 1, a(a.size - 1).copy(_3 = true))
           }
@@ -245,10 +267,10 @@ object LineFrag {
     // TODO use codepoint index, or even better grapheme index
     def measurePrefix(small: Int): Float =
       if (small == 0) 0
-      else if (small == text.size) measure.width
+      else if (small == text.size) textMeasure.width
       else style.measure(text.take(small)).width + pad
 
-    lazy val measure = {
+    lazy val textMeasure = {
       val res = style.measure(text)
       if (pad == 0) {
         res
@@ -259,58 +281,80 @@ object LineFrag {
 
     def count = 1
 
-    def parentNodeWithRelativeIndex(): (Node, Int) = {
-      parentNodeWithRelativeIndexInner()
-    }
+    def parentNodeWithRelativeIndex(): (Node, Int) = parentNodeWithRelativeIndexInner()
 
-    override def render(canvas: Canvas): Unit =
-      canvas.draw(text, style, pad, measure.y)
-
+    override def render(canvas: Canvas): Unit = canvas.draw(text, style, pad, textMeasure.y)
   }
 
   class Pad(width: Float) extends Atomic {
-    val measure: TextMeasure = TextMeasure(width, 0, 0)
+    val textMeasure: TextMeasure = TextMeasure(width, 0, 0)
     override def render(canvas: Canvas): Unit = {}
     def count = 0
   }
 
-  def measureFrags(parent: Frag, frags: Seq[LineFrag], w0: Float, h0: Float) = {
+  // w0, h0 is an offset to measure childs, don't affect the result TextMeasure
+  def measureFrags(parent: Frag, frags: Seq[LineFrag]) = {
     var y = 0F
     var my = 0F
     var i = 0
     while (i < frags.size) {
       val frag = frags(i)
       frag.parent = parent
-      y = y max frag.measure.y
-      my = my max frag.measure.my
+      y = y max frag.textMeasure.y
+      my = my max frag.textMeasure.my
       i += 1
     }
-    var width = w0
+    var width = 0F
     i = 0
     while (i < frags.size) {
       val frag = frags(i)
       frag.left = width
-      width += frag.measure.width
-      frag.top = y - frag.measure.y + h0
+      width += frag.textMeasure.width
+      frag.top = y - frag.textMeasure.y
       i += 1
     }
-    TextMeasure(width - w0, my, y)
+    TextMeasure(width, my, y)
   }
   class Compose(override val frags: Seq[LineFrag]) extends LineFrag with HasChildFrag {
-    lazy val measure: TextMeasure = measureFrags(this, frags, 0, 0)
+    lazy val textMeasure: TextMeasure = measureFrags(this, frags)
   }
 }
 
-sealed trait BlockFrag extends Frag {
+sealed trait BlockFrag extends HasChildFrag {
 
-  def lastLineWidth: Float
+  /**
+   * in general block frag looks like this
+   *      ________
+   * _____|      |
+   * |           |
+   * |     ______|
+   * |____|
+   *
+   * we use parameters, w, h
+   */
 
-  def width = _width
-  def height = _height
-  var _width = 0F
-  var _height = 0F
-  var carveLeftTop: TextMeasure = null
+  def render(canvas: Canvas, firstLineTransX: Float, firstLineTransY: Float): Unit
+
+  override def render(canvas: Canvas): Unit = {
+    render(canvas, 0, 0)
+  }
+
+  def height : Float = _intrinsicHeight  + lastLineTransY + firstLineTransY
+  def width: Float = _intrinsicWidth
+  override def intrinsicHeight: Float = _intrinsicHeight
+  override def intrinsicWidth: Float = _intrinsicWidth
+  protected var _intrinsicWidth = 0F
+  protected var _intrinsicHeight = 0F
+  var firstLine: TextMeasure = null
   var lastLine: TextMeasure = null
+  // this exists separately because we don't want to prematurely measure too much
+  // it should be equal to lastLine.width after measure
+  def lastLineWidth: Float
+  // in addition to top, left set by parents, we have another set by parents, lastline gap
+  // this is because composing might need lastline move it's baseline etc.
+  protected var lastLineTransY: Float = 0 // they are all positive
+  protected var firstLineTransX: Float = 0
+  protected var firstLineTransY: Float = 0 // they are all positive
 }
 
 object BlockFrag {
@@ -319,35 +363,86 @@ object BlockFrag {
     assert(frags.exists(_.isInstanceOf[BlockFrag]))
     lazy val lastLineWidth: Float = {
       val lines = frags.reverse.takeWhile(_.isInstanceOf[LineFrag])
-      dependentCast[BlockFrag](frags(frags.size - lines.size - 1)).lastLineWidth + lines.map(_.width).sum
+      dependentCast[BlockFrag](frags(frags.size - lines.size - 1)).lastLineWidth +
+          lines.map(a => dependentCast[LineFrag](a).width).sum
     }
 
-    override protected def doMeasure(before0: TextMeasure): Unit = {
-      carveLeftTop = null
+    override protected def doMeasure(): Unit = {
+      firstLine = null
+      lastLine = TextMeasure.empty
       var height = 0F
       var width = 0F
-      var before = before0
+      var before = TextMeasure.empty
+      var blockBefore: BlockFrag = null
       val lines = mutable.ArrayBuffer[LineFrag]()
+      def doBeforeMiddleAfter(b1: TextMeasure, after: TextMeasure): TextMeasure = {
+        val yMax = before.y max b1.y max after.y
+        val myMax = before.my max b1.my max after.my
+        if (blockBefore != null) blockBefore.lastLineTransY = yMax - before.y
+        lines.foreach(l => {
+          l.top += height + yMax - b1.y
+          l.left += before.width
+        })
+        TextMeasure(b1.width + after.width, myMax, yMax)
+      }
       for (f <- frags) {
         f match {
-          case frag: LineFrag =>
-            lines.append(frag)
-          case frag: BlockFrag =>
-            val b1 = LineFrag.measureFrags(this, lines.toSeq, before.width, height)
-            frag.measure(b1)
-            frag.top = height
-            frag.left = 0
-            height += frag._height
-            width = width max frag._width
-            if (carveLeftTop == null) carveLeftTop = TextMeasure(before0.width, frag.carveLeftTop.my, frag.carveLeftTop.y)
+          case f: LineFrag =>
+            lines.append(f)
+          case f: BlockFrag =>
+            val b1 = LineFrag.measureFrags(this, lines.toSeq)
+            f.measure()
+            val after = f.firstLine
+            f.left = 0
+            val tt = doBeforeMiddleAfter(b1, after)
+            if (firstLine == null) firstLine = tt
+            val gapTop = tt.y - after.y
+            val gapBottom = tt.my - after.my
+            f.top = height + gapTop + gapBottom
+            f.firstLineTransY = gapBottom
+            f.firstLineTransX = before.width + b1.width
+            width = width max f.width max (before.width + b1.width + after.width)
+            height = f.top + f.height - f.lastLine.height
+            lastLine = f.lastLine
+            before = f.lastLine
             lines.clear()
-            before = frag.lastLine
         }
       }
-      val ll = LineFrag.measureFrags(this, lines.toSeq, before.width, height)
-      this._width = width max (ll.width + before.width)
-      this._height = height
-      this.lastLine = TextMeasure(ll.width + before.width, ll.my, ll.y)
+      val b1 = LineFrag.measureFrags(this, lines.toSeq)
+      lastLine = doBeforeMiddleAfter(b1, TextMeasure.empty)
+      _intrinsicHeight = height + lastLine.height
+      _intrinsicWidth = width
+      lines.clear()
+    }
+
+    /**
+     * in general block frag looks like this
+     * ________
+     * _____|      |
+     * |           |
+     * |     ______|
+     * |____|
+     *
+     * we use parameters, w, h
+     */
+    override def render(canvas: Canvas, firstLineExtraX: Float, firstLineExtraY: Float): Unit = {
+      var firstLine = true
+      for (f <- frags) {
+        canvas.save()
+        val extraX = if (firstLine) firstLineExtraX + firstLineTransX else 0
+        val extraY = if (firstLine) firstLineExtraY + firstLineTransY else 0
+        f match {
+          case _: LineFrag =>
+            canvas.translate(f.left + extraX, f.top - extraY)
+            f.render(canvas)
+            canvas.restore()
+          case b: BlockFrag =>
+            canvas.translate(f.left, f.top)
+            b.render(canvas, extraX, extraY)
+            canvas.restore()
+            firstLine = false
+        }
+      }
     }
   }
 
@@ -358,17 +453,43 @@ object BlockFrag {
 
     override def lastLineWidth: Float = end.width
 
-    override protected def doMeasure(before: TextMeasure): Unit = {
+    override def render(canvas: Canvas, firstLineExtraX: Float, firstLineExtraY: Float): Unit = {
+      canvas.save()
+      canvas.translate(
+        start.left + firstLineExtraX + firstLineTransX,
+        start.top - firstLineExtraY - firstLineTransY)
+      start.render(canvas)
+      canvas.restore()
+      for (f <- center) {
+        canvas.save()
+        canvas.translate(f.left, f.top)
+        f.render(canvas)
+        canvas.restore()
+      }
+      canvas.save()
+      canvas.translate(end.left, end.top)
+      end.render(canvas)
+      canvas.restore()
+    }
+
+    override protected def doMeasure(): Unit = {
       start.top = 0
-      start.left = before.width
+      start.left = 0
       var height = start.height
-      var width = start.width + before.width
+      var width = start.width
       var i = 0
       while (i < center.size) {
         val frag = center(i)
         frag.parent = this
-        frag.measure(TextMeasure.empty)
+        frag.measure()
         frag.left = pad
+        frag match {
+          case frag: BlockFrag =>
+            frag.lastLineTransY = 0
+            frag.firstLineTransX = 0
+            frag.firstLineTransY = 0
+          case _: LineFrag =>
+        }
         width = (frag.width + pad) max width
         frag.top = height
         height += frag.height
@@ -376,12 +497,12 @@ object BlockFrag {
       }
       end.top = height
       end.left = 0
-      height = height + end.height
+      height += end.height
       width = width max end.width
-      this._height = height
-      this._width = width
-      carveLeftTop = TextMeasure(before.width, start.measure.my, start.measure.y)
-      lastLine = end.measure
+      firstLine = start.textMeasure
+      lastLine = end.textMeasure
+      this._intrinsicHeight = height
+      this._intrinsicWidth = width
     }
 
   }

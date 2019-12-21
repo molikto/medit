@@ -73,17 +73,18 @@ sealed trait Node {
   }
 
   def rect(focus: Seq[Int]): Rect = {
-    var left = 0F
-    var top = 0F
-    var f = apply(focus).frag
-    val width = f.width
-    val height = f.height
-    while (f != frag) {
-      left += f.left
-      top += f.top
-      f = f.parent
-    }
-    Rect(left, top, width, height)
+//    var left = 0F
+//    var top = 0F
+//    var f = apply(focus).frag
+//    val width = f.width
+//    val height = f.height
+//    while (f != frag) {
+//      left += f.left
+//      top += f.top
+//      f = f.parent
+//    }
+//    Rect(left, top, width, height)
+    ???
   }
 
   var frag: Frag = null
@@ -91,7 +92,7 @@ sealed trait Node {
   var fragWidthDown: Float = -1
   var fragForceLinear: Boolean = false
 
-  // layout will determine itself the size and multiline, then top left is assgined by parent
+  // actually, line breaking into frags
   def layout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
     if (frag != null && (fragWidth != width || fragWidthDown != widthDown || fragForceLinear != forceLinear)) {
       frag.node = null
@@ -104,7 +105,8 @@ sealed trait Node {
     frag
   }
 
-  def measure() = frag.measure(TextMeasure.empty)
+  // given we have determined a frag, measure makes it renderable
+  def measure() = frag.measure()
 
   def render(canvas: draw.Canvas) = frag.render(canvas)
 

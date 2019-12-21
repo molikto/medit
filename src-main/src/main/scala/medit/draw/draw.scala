@@ -49,6 +49,7 @@ object Size {
 case class TextMeasure(width: Float, my: Float, y: Float) {
   def *(a: Int) = TextMeasure(width * a, my, y)
   def +(y: TextMeasure): TextMeasure = TextMeasure(width + y.width, my max y.my, this.y max y.y)
+  def height: Float = my + y
 }
 object TextMeasure {
   val empty = TextMeasure(0, 0, 0)
@@ -97,7 +98,7 @@ object TextStyle {
   val reference = TextStyle(0xFFb9acbf, Typeface.Mono, 13)
   val declare = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
   val const = TextStyle(0xFF6A8759, Typeface.Mono, 13)
-  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 3)
+  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 9)
   val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)
 }
 
