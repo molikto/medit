@@ -143,7 +143,19 @@ sealed trait Type {
 }
 
 sealed trait Template {
+
   /** MEDIT_EXTRA_START **/
+
+  import Template._
+  def removeRightPad(): Template = this match {
+    case Template.Compose(Seq(a, RightPad)) => a
+    case _ => this
+  }
+
+  def removeLeftPad(): Template = this match {
+    case Template.Compose(Seq(LeftPad, a)) => a
+    case _ => this
+  }
   def check(fields: Seq[NameTypeTag]): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
 
@@ -159,37 +171,35 @@ sealed trait Template {
               if (str.isEmpty) throw StructureException.BlankConstants()
             case Template.Pad | Template.LeftPad | Template.RightPad =>
           }
-        case a =>
+        case f: Template.FieldRef =>
           if (!complex) throw StructureException.OnlySimple()
-          a match {
-            case f: Template.FieldRef =>
-              f match {
-                case Template.Unfold(_) =>
-                  if (!unfold) throw StructureException.UnfoldNotSupported()
-                case _ =>
-              }
-              f.index = fields.indexWhere(_.name == f.name)
-              if (f.index == -1) throw StructureException.UnknownField()
-              if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
-              remaining.remove(f.name)
-            case Template.Compose(content) =>
-              content.foreach(a => rec(a))
-            case Template.Tree(b1, content, sep, b2) =>
-              content match {
-                case Seq(f@Template.Unfold(_)) =>
-                  rec(f, true)
-                  fields(f.index).tag match {
-                    case coll: TypeTag.Coll =>
-                    case _ =>
-                      throw StructureException.CannotUnfold()
-                  }
-                case _ =>
-                  content.foreach(a => rec(a))
-              }
-              b1.foreach(a => rec(a, complex = false))
-              sep.foreach(a => rec(a, complex = false))
-              b2.foreach(a => rec(a, complex = false))
+          f match {
+            case Template.Unfold(_) =>
+              if (!unfold) throw StructureException.UnfoldNotSupported()
+            case _ =>
           }
+          f.index = fields.indexWhere(_.name == f.name)
+          if (f.index == -1) throw StructureException.UnknownField()
+          if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
+          remaining.remove(f.name)
+        case Template.Compose(content) =>
+          content.foreach(a => rec(a, complex))
+        case Template.Tree(b1, content, sep, b2) =>
+          if (!complex) throw StructureException.OnlySimple()
+          content match {
+            case Seq(f@Template.Unfold(_)) =>
+              rec(f, true)
+              fields(f.index).tag match {
+                case coll: TypeTag.Coll =>
+                case _ =>
+                  throw StructureException.CannotUnfold()
+              }
+            case _ =>
+              content.foreach(a => rec(a))
+          }
+          rec(b1, complex = false)
+          sep.foreach(a => rec(a, complex = false))
+          rec(b2, complex = false)
 
       }
     }
@@ -209,10 +219,10 @@ object Template {
       Compose(Seq(
         Keyword(name),
         Tree(
-          Seq(Delimiter("(")),
+          Delimiter("("),
           fields.map(f => Template.Field(f.name)),
           Some(Separator(",")),
-          Seq(Delimiter(")"))
+          Delimiter(")")
         )
       ))
     }
@@ -255,7 +265,7 @@ object Template {
 
   //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
-  case class Tree(b1: Seq[Template], content: Seq[Template], sep: Option[Template], b2: Seq[Template]) extends Template
+  case class Tree(b1: Template, content: Seq[Template], sep: Option[Template], b2: Template) extends Template
 
   @upickle.implicits.key("compose")
   case class Compose(content: Seq[Template]) extends Template

@@ -162,15 +162,8 @@ object Node {
       s._parent = this
     }
 
-    def layoutLinear(left: Seq[Template]) : LineFrag = {
-      if (left.isEmpty) {
-        new LineFrag.Compose(Seq.empty)
-      } else if (left.size == 1) {
-        dependentCast[LineFrag](layout(left.head, 0, 0, true))
-      } else {
-        new LineFrag.Compose(left.map(l => dependentCast[LineFrag](layout(l, 0, 0, true))))
-      }
-    }
+    def layoutLinear(left: Template) : LineFrag =
+      dependentCast[LineFrag](layout(left, 0, 0, forceLinear = true))
 
     @inline def layoutCompose(cs: Seq[Template], width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       val (all, isBlock, _) = cs.foldLeft((Seq.empty[Frag], false, width - widthDown) : (Seq[Frag], Boolean, Float)) { (acc, c) =>
@@ -191,25 +184,25 @@ object Node {
       }
     }
 
-    @inline def layoutTree(left: Seq[Template], cs: Seq[Frag], sep: Template, end: Seq[Template], width: Float, forceLinear: Boolean): Frag = {
+    @inline def layoutTree(left: Template, cs: Seq[Frag], sep: Template, end: Template, width: Float, forceLinear: Boolean): Frag = {
       val leftFrag = layoutLinear(left)
-      val sepFrag = layoutLinear(Seq(sep))
+      val sepFrag = layoutLinear(sep)
       val endFrag = layoutLinear(end)
       if (forceLinear || !cs.exists(_.isInstanceOf[BlockFrag])
           && leftFrag.width + cs.map(a => dependentCast[LineFrag](a).width).sum + sepFrag.width * cs.size + endFrag.width <= width) {
-        new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(Seq(sep)), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
+        new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(sep), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
       } else {
         val leftFrag1 = {
-          val removedPadding = left.reverse.dropWhile(_ == RightPad).reverse
-          if (removedPadding.size != left.size) {
+          val removedPadding = left.removeRightPad()
+          if (removedPadding != left) {
             layoutLinear(removedPadding)
           } else {
             leftFrag
           }
         }
         val endFrag1 = {
-          val removedPadding = end.dropWhile(_ == LeftPad)
-          if (removedPadding.size != end.size) {
+          val removedPadding = end.removeRightPad()
+          if (removedPadding != end) {
             layoutLinear(removedPadding)
           } else {
             endFrag
@@ -231,9 +224,9 @@ object Node {
             } else {
               pair._1 match {
                 case frag: BlockFrag =>
-                  new BlockFrag.Compose(Seq(frag, layoutLinear(Seq(sep))))
+                  new BlockFrag.Compose(Seq(frag, layoutLinear(sep)))
                 case frag: LineFrag =>
-                  new LineFrag.Compose(Seq(frag, layoutLinear(Seq(sep))))
+                  new LineFrag.Compose(Seq(frag, layoutLinear(sep)))
               }
             }
           }
@@ -328,9 +321,9 @@ object Node {
 
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      val left = Seq(Template.Delimiter("["))
+      val left = Template.Delimiter("[")
       val sep = Template.Separator(",")
-      val end = Seq(Template.Delimiter("]"))
+      val end = Template.Delimiter("]")
       val wd = widthDown - Node.DefaultIndent
       val cs = childs.map(_.layout(wd, wd, forceLinear))
       layoutTree(left, cs, sep, end, width, forceLinear)

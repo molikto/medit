@@ -16,7 +16,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -31,7 +30,6 @@
             }
           ],
           "template": [
-
           ]
         },
         {
@@ -46,7 +44,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -61,7 +58,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -172,12 +168,10 @@
             },
             {
               "$type": "tree",
-              "b1": [
-                {
-                  "$type": "delimiter",
-                  "str": "("
-                }
-              ],
+              "b1": {
+                "$type": "delimiter",
+                "str": "("
+              },
               "content": [
                 {
                   "$type": "field",
@@ -194,12 +188,10 @@
                   "str": ","
                 }
               ],
-              "b2": [
-                {
-                  "$type": "delimiter",
-                  "str": ")"
-                }
-              ]
+              "b2": {
+                "$type": "delimiter",
+                "str": ")"
+              }
             }
           ]
         }
@@ -228,7 +220,6 @@
         }
       ],
       "template": [
-        
       ]
     },
     {
@@ -283,12 +274,10 @@
                 },
                 {
                   "$type": "tree",
-                  "b1": [
-                    {
-                      "$type": "delimiter",
-                      "str": "("
-                    }
-                  ],
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
                   "content": [
                     {
                       "$type": "field",
@@ -305,12 +294,10 @@
                       "str": ","
                     }
                   ],
-                  "b2": [
-                    {
-                      "$type": "delimiter",
-                      "str": ")"
-                    }
-                  ]
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
                 }
               ]
             }
@@ -357,15 +344,18 @@
                 },
                 {
                   "$type": "tree",
-                  "b1": [
-                    {
-                      "$type": "delimiter",
-                      "str": "{"
-                    },
-                    {
-                      "$type": "right_pad"
-                    }
-                  ],
+                  "b1": {
+                    "$type": "compose",
+                    "content": [
+                      {
+                        "$type": "delimiter",
+                        "str": "{"
+                      },
+                      {
+                        "$type": "right_pad"
+                      }
+                    ]
+                  },
                   "content": [
                     {
                       "$type": "unfold",
@@ -378,15 +368,18 @@
                       "str": ";"
                     }
                   ],
-                  "b2": [
-                    {
-                      "$type": "left_pad"
-                    },
-                    {
-                      "$type": "delimiter",
-                      "str": "}"
-                    }
-                  ]
+                  "b2": {
+                    "$type": "compose",
+                    "content": [
+                      {
+                        "$type": "left_pad"
+                      },
+                      {
+                        "$type": "delimiter",
+                        "str": "}"
+                      }
+                    ]
+                  }
                 }
               ]
             }
@@ -410,7 +403,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -425,7 +417,6 @@
             }
           ],
           "template": [
-
           ]
         },
         {
@@ -440,7 +431,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -448,7 +438,7 @@
           "fields": [
             {
               "name": "content",
-              "tag" : {
+              "tag": {
                 "$type": "arr",
                 "item": {
                   "$type": "ref",
@@ -464,11 +454,8 @@
             {
               "name": "b1",
               "tag": {
-                "$type": "arr",
-                "item": {
-                  "$type": "ref",
-                  "name": "template"
-                }
+                "$type": "ref",
+                "name": "template"
               }
             },
             {
@@ -494,16 +481,12 @@
             {
               "name": "b2",
               "tag": {
-                "$type": "arr",
-                "item": {
-                  "$type": "ref",
-                  "name": "template"
-                }
+                "$type": "ref",
+                "name": "template"
               }
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -511,7 +494,6 @@
           "fields": [
           ],
           "template": [
-            
           ]
         },
         {
@@ -519,7 +501,6 @@
           "fields": [
           ],
           "template": [
-
           ]
         },
         {
@@ -527,7 +508,6 @@
           "fields": [
           ],
           "template": [
-            
           ]
         },
         {
@@ -542,7 +522,6 @@
             }
           ],
           "template": [
-            
           ]
         },
         {
@@ -557,7 +536,6 @@
             }
           ],
           "template": [
-            
           ]
         }
       ]
