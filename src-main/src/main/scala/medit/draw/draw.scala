@@ -97,7 +97,7 @@ object TextStyle {
   val reference = TextStyle(0xFFb9acbf, Typeface.Mono, 13)
   val declare = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
   val const = TextStyle(0xFF6A8759, Typeface.Mono, 13)
-  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 13)
+  val delimiters = TextStyle(0xFF787878, Typeface.Mono, 3)
   val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)
 }
 
