@@ -198,7 +198,7 @@ sealed trait Template {
               content.foreach(a => rec(a))
           }
           rec(b1, complex = false)
-          sep.foreach(a => rec(a, complex = false))
+          rec(sep, complex = false)
           rec(b2, complex = false)
 
       }
@@ -221,7 +221,7 @@ object Template {
         Tree(
           Delimiter("("),
           fields.map(f => Template.Field(f.name)),
-          Some(Separator(",")),
+          Separator(","),
           Delimiter(")")
         )
       ))
@@ -265,7 +265,7 @@ object Template {
 
   //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
   @upickle.implicits.key("tree")
-  case class Tree(b1: Template, content: Seq[Template], sep: Option[Template], b2: Template) extends Template
+  case class Tree(b1: Template, content: Seq[Template], sep: Template, b2: Template) extends Template
 
   @upickle.implicits.key("compose")
   case class Compose(content: Seq[Template]) extends Template

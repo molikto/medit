@@ -263,7 +263,7 @@ object Node {
             case _ =>
               content.map(a => layout(a, wd, wd, forceLinear))
           }
-          layoutTree(b1, cons, sep.getOrElse(Template.Compose(Seq.empty)), b2, width, forceLinear)
+          layoutTree(b1, cons, sep, b2, width, forceLinear)
       }
     }
   }

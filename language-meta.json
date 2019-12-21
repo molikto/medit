@@ -182,12 +182,12 @@
                   "name": "template"
                 }
               ],
-              "sep": [
+              "sep":
                 {
                   "$type": "separator",
                   "str": ","
                 }
-              ],
+              ,
               "b2": {
                 "$type": "delimiter",
                 "str": ")"
@@ -288,12 +288,12 @@
                       "name": "template"
                     }
                   ],
-                  "sep": [
+                  "sep":
                     {
                       "$type": "separator",
                       "str": ","
                     }
-                  ],
+                  ,
                   "b2": {
                     "$type": "delimiter",
                     "str": ")"
@@ -362,12 +362,12 @@
                       "name": "cases"
                     }
                   ],
-                  "sep": [
+                  "sep":
                     {
                       "$type": "separator",
                       "str": ";"
                     }
-                  ],
+                  ,
                   "b2": {
                     "$type": "compose",
                     "content": [
@@ -471,11 +471,8 @@
             {
               "name": "sep",
               "tag": {
-                "$type": "opt",
-                "item": {
-                  "$type": "ref",
-                  "name": "template"
-                }
+                "$type": "ref",
+                "name": "template"
               }
             },
             {
