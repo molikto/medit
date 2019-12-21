@@ -216,11 +216,19 @@ object Template {
     if (fields.isEmpty) {
       Keyword(name)
     } else {
+      val namedFields = fields.size >= 2
       Compose(Seq(
         Keyword(name),
         Tree(
           Delimiter("("),
-          fields.map(f => Template.Field(f.name)),
+          fields.map(f =>  {
+            val just = Template.Field(f.name)
+            if (namedFields) {
+              Compose(Seq(Template.Delimiter(f.name), Template.Separator("="), just))
+            } else {
+              just
+            }
+          }),
           Separator(","),
           Delimiter(")")
         )
