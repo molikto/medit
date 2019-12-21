@@ -219,9 +219,14 @@ object Node {
           if (pair._2 == cs.size - 1) {
             pair._1
           } else {
-            // FIXME this is a hack, we need to check equality
             val parent = pair._1.parent
-            if (parent != null && parent.frags.size == 2 && parent.frags(0) == pair._1 && parent.frags(1).matches(sep)) {
+            def matches(frag: Frag, sep: Template): Boolean = (frag, sep) match {
+              case (txt: LineFrag.Text, Template.Separator(str)) =>
+                if (txt.text == str && txt.style == TextStyle.delimiters) true
+                else false
+              case _ => false
+            }
+            if (parent != null && parent.frags.size == 2 && parent.frags(0) == pair._1 && matches(parent.frags(1), sep)) {
               pair._1.parent
             } else {
               pair._1 match {

@@ -17,12 +17,6 @@ import scala.collection.mutable
  *
  */
 sealed trait Frag {
-  def matches(sep: Template): Boolean = (this, sep) match {
-    case (txt: LineFrag.Text, Template.Separator(str)) =>
-      if (txt.text == str && txt.style == TextStyle.delimiters) true
-      else false
-    case _ => false
-  }
 
   def finish(canvas: LineCanvas): Unit
 
