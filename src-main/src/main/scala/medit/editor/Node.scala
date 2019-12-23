@@ -21,37 +21,6 @@ sealed trait Node {
   def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else logicError()
   def childs: Seq[Node]
 
-  def editable = this.isInstanceOf[Node.StringLeaf]
-
-  def tryDelete(last: Int) = false
-  def tryNewChild(): Int = -1
-  def editAppend(c: Int, small: Int): Unit = logicError()
-  def editBackspace(small: Int): Unit = logicError()
-  def editCommit(): Unit = logicError()
-
-  def reverse(f: Node): Seq[Int] = {
-    def rec(f: Node, acc: Seq[Int]): Seq[Int] = {
-      if (f == this) {
-        acc
-      } else {
-        val p = f.parent
-        val i = p.childs.indexOf(f)
-        rec(p, i +: acc)
-      }
-    }
-    rec(f, Seq.empty)
-  }
-
-
-  def reverse(text: LineFrag.Text): (Seq[Int], Int) = {
-    val (n, i) = text.parentNodeWithRelativeIndex()
-    (reverse(n), i)
-  }
-
-  def get(focus: Seq[Int], index: Int): LineFrag.Text = {
-    apply(focus).frag.get(index)
-  }
-
   def invalidate(): Unit = {
     frag = null
     if (_parent != null) _parent.invalidate()
@@ -66,7 +35,6 @@ sealed trait Node {
   // calculate frags
   def layout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
     if (frag != null && (fragWidth != width || fragWidthDown != widthDown || fragForceLinear != forceLinear)) {
-      frag.node = null
       frag = null
     }
     if (frag == null) {
@@ -74,7 +42,6 @@ sealed trait Node {
       fragWidth = width
       fragWidthDown = widthDown
       fragForceLinear = forceLinear
-      if (frag.node == null) frag.node = this
     }
     frag
   }
@@ -242,7 +209,7 @@ object Node {
           val style = TextStyle.delimiters
           val unit = style.unit.width / 4F
           // we cannot use LineFrag.Pad here, as they create extra insertion point
-          new LineFrag.Text(name, TextStyle.delimiters, unit)
+          new LineFrag.Text(name, TextStyle.delimiters, pad = unit)
         case Template.Pad | Template.LeftPad | Template.RightPad  =>
           new LineFrag.Pad(TextStyle.delimiters.unit.width)
         case Template.Delimiter(str) =>
@@ -299,21 +266,21 @@ object Node {
       override protected var _parent: Node,
       val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
 
-    override def tryNewChild(): Int = {
-      // TODO check collection type and size limit
-      _childs.append(default(this, language, sort.item))
-      _childs.size - 1
-    }
-
-
-    override def tryDelete(last: Int): Boolean = {
-      if (last < childs.size) {
-        _childs.remove(last)._parent = null
-        true
-      } else {
-        false
-      }
-    }
+//    override def tryNewChild(): Int = {
+//      // TODO check collection type and size limit
+//      _childs.append(default(this, language, sort.item))
+//      _childs.size - 1
+//    }
+//
+//
+//    override def tryDelete(last: Int): Boolean = {
+//      if (last < childs.size) {
+//        _childs.remove(last)._parent = null
+//        true
+//      } else {
+//        false
+//      }
+//    }
 
     override def save(): Value = {
       ujson.Arr.from(childs.map(_.save()))
@@ -330,42 +297,32 @@ object Node {
     }
   }
 
-  sealed trait StringLeaf extends Node {
+  sealed trait EditableLeaf extends Node {
     override def childs: Seq[Node] = Seq.empty
 
     protected var buffer = ""
 
-    override def editAppend(c: Int, small: Int): Unit = {
+    def appendEdit(c: Int, small: Int): Unit = {
       invalidate()
       buffer = buffer.take(small) + c.toChar.toString + buffer.drop(small)
     }
 
-
-    override def editBackspace(small: Int): Unit = {
+    def backspaceEdit(small: Int): Unit = {
       invalidate()
       buffer = buffer.take(small - 1) + buffer.drop(small)
     }
 
-    def tryCommit(buffer: String): Boolean
-
-    override def editCommit(): Unit = {
-      if (tryCommit(buffer)) {
-        buffer = ""
-      }
-    }
-
-
     def style: TextStyle
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      new LineFrag.Text(buffer, style)
+      new LineFrag.Text(buffer, style, node = this)
     }
   }
 
   class Choice(
       override protected var _parent: Node,
       val language: Language, val tag: TypeTag.Ref
-  ) extends StringLeaf {
+  ) extends EditableLeaf {
     def init(c: String): _root_.medit.editor.Node = {
       buffer = c
       this
@@ -375,7 +332,7 @@ object Node {
 
     override def save(): Value = ujson.Obj.from(Seq(("$choice", buffer)))
 
-    override def tryCommit(buffer: String): Boolean = {
+    def tryCommit(buffer: String): Boolean = {
       typ.cases.indexWhere(_.name == buffer) match {
         case -1 => false
         case i =>
@@ -396,7 +353,7 @@ object Node {
   class Str(
       override protected var _parent: Node,
       val style: TextStyle
-  ) extends StringLeaf {
+  ) extends EditableLeaf {
 
 
   override def save(): Value = ujson.Str(buffer)
@@ -405,7 +362,5 @@ object Node {
       buffer = str
       this
     }
-
-    override def tryCommit(buffer: String): Boolean = false
   }
 }

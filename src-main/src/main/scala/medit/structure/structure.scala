@@ -221,7 +221,7 @@ object Template {
         Keyword(name),
         Tree(
           Delimiter("("),
-          fields.map(f =>  {
+          fields.map(f => {
             val just = Template.Field(f.name)
             if (namedFields) {
               Compose(Seq(Template.Delimiter(f.name), Template.Separator("="), just))

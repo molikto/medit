@@ -47,6 +47,10 @@ object Size {
 }
 
 case class TextMeasure(width: Float, my: Float, y: Float) {
+  def avg(measure: TextMeasure) = {
+    TextMeasure((width + measure.width) / 2, (my + measure.my) / 2, (y + measure.y) / 2)
+  }
+
   def *(a: Int) = TextMeasure(width * a, my, y)
   def +(y: TextMeasure): TextMeasure = TextMeasure(width + y.width, my max y.my, this.y max y.y)
   def height: Float = my + y
