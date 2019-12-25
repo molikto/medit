@@ -457,25 +457,30 @@
                   "str": "col_field"
                 },
                 {
+                  "$type": "tree",
+                "b1": {
                   "$type": "delimiter",
                   "str": "("
                 },
-                {
-                  "$type": "str_field",
-                  "name": "name",
-                  "style": "reference"
-                },
-                {
-                  "$type": "separator",
-                  "str": ","
-                },
-                {
-                  "$type": "field",
-                  "name": "sep"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
+                  "content": [
+                    {
+                      "$type": "str_field",
+                      "name": "name",
+                      "style": "reference"
+                    },
+                    {
+                      "$type": "field",
+                      "name": "sep"
+                    }
+                  ],
+                  "sep": {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
                 }
               ]
             }
@@ -506,26 +511,31 @@
                   "str": "str_field"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": "("
-                },
-                {
-                  "$type": "str_field",
-                  "name": "name",
-                  "style": "reference"
-                },
-                {
-                  "$type": "separator",
-                  "str": ","
-                },
-                {
-                  "$type": "str_field",
-                  "name": "style",
-                  "style": "const"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
+                  "$type": "tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "content": [
+                    {
+                      "$type": "str_field",
+                      "name": "name",
+                      "style": "reference"
+                    },
+                    {
+                      "$type": "str_field",
+                      "name": "style",
+                      "style": "const"
+                    }
+                  ],
+                  "sep": {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
                 }
               ]
             }
@@ -550,17 +560,26 @@
                   "str": "field"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": "("
-                },
-                {
-                  "$type": "str_field",
-                  "name": "name",
-                  "style": "reference"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
+                  "$type": "tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "content": [
+                    {
+                      "$type": "str_field",
+                      "name": "name",
+                      "style": "reference"
+                    }
+                  ],
+                  "sep": {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
                 }
               ]
             }
@@ -581,6 +600,7 @@
             }
           ],
           "template": [
+
             {
               "$type": "compose",
               "content" : [
@@ -640,49 +660,47 @@
             }
           ],
           "template": [
+
             {
               "$type": "compose",
-              "content": [
+              "content" : [
                 {
                   "$type": "keyword",
                   "str": "col_tree"
                 },
                 {
-                  "$type": "delimiter",
-                  "str": "("
-                },
-                {
-                  "$type": "field",
-                  "name": "b1"
-                },
-                {
-                  "$type": "separator",
-                  "str": ","
-                },
-                {
-                  "$type": "str_field",
-                  "name": "name",
-                  "style": "reference"
-                },
-                {
-                  "$type": "separator",
-                  "str": ","
-                },
-                {
-                  "$type": "field",
-                  "name": "sep"
-                },
-                {
-                  "$type": "separator",
-                  "str": ","
-                },
-                {
-                  "$type": "field",
-                  "name": "b2"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
+                  "$type": "tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "content": [
+                    {
+                      "$type": "field",
+                      "name": "b1"
+                    },
+                    {
+                      "$type": "str_field",
+                      "name": "name",
+                      "style": "reference"
+                    },
+                    {
+                      "$type": "field",
+                      "name": "sep"
+                    },
+                    {
+                      "$type": "field",
+                      "name": "b2"
+                    }
+                  ],
+                  "sep": {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
                 }
               ]
             }
@@ -724,6 +742,60 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "tree"
+                },
+                {
+                  "$type": "tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "content": [
+                    {
+                      "$type": "field",
+                      "name": "b1"
+                    },
+                    {
+                      "$type": "col_tree",
+                      "name": "content",
+                      "b1": {
+                        "$type": "delimiter",
+                        "str": "["
+                      },
+                      "b2": {
+                        "$type": "delimiter",
+                        "str": "]"
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ","
+                      }
+                    },
+                    {
+                      "$type": "field",
+                      "name": "sep"
+                    },
+                    {
+                      "$type": "field",
+                      "name": "b2"
+                    }
+                  ],
+                  "sep": {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
+                }
+              ]
+            }
           ]
         },
         {
@@ -763,20 +835,12 @@
               "content" : [
                 {
                   "$type": "keyword",
-                  "str": "delimiter"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": "("
+                  "str": "d"
                 },
                 {
                   "$type": "str_field",
                   "name": "str",
                   "style": "const"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
                 }
               ]
             }
@@ -798,20 +862,12 @@
               "content" : [
                 {
                   "$type": "keyword",
-                  "str": "keyword"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": "("
+                  "str": "k"
                 },
                 {
                   "$type": "str_field",
                   "name": "str",
                   "style": "const"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
                 }
               ]
             }
@@ -833,23 +889,16 @@
               "content" : [
                 {
                   "$type": "keyword",
-                  "str": "separator"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": "("
+                  "str": "s"
                 },
                 {
                   "$type": "str_field",
                   "name": "str",
                   "style": "const"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
                 }
               ]
             }
+
           ]
         }
       ]

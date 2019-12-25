@@ -121,13 +121,13 @@ sealed trait Type {
 
   def name: String
 
-  def check(types: Seq[Type]) = this match {
+  def check(types: Seq[Type], language: Language) = this match {
     case record: Type.Record =>
       if (record.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(record.fields.map(_.name))) throw StructureException.DuplicateName()
       record.fields.foreach(_.tag.check(types))
-      record.template.foreach(_.check(record.fields))
-      record.defaultTemplate.check(record.fields)
+      record.template.foreach(_.check(record.fields, language))
+      record.defaultTemplate.check(record.fields, language)
     case sum: Type.Sum =>
       if (sum.cases.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(sum.cases.map(_.name))) throw StructureException.DuplicateName()
@@ -135,8 +135,8 @@ sealed trait Type {
         if (a.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
         if (!utils.unique(a.fields.map(_.name))) throw StructureException.DuplicateName()
         a.fields.foreach(_.tag.check(types))
-        a.template.foreach(_.check(a.fields))
-        a.defaultTemplate.check(a.fields)
+        a.template.foreach(_.check(a.fields, language))
+        a.defaultTemplate.check(a.fields, language)
       })
   }
 
@@ -157,7 +157,7 @@ sealed trait Template {
     case Template.Compose(Seq(LeftPad, a)) => a
     case _ => this
   }
-  def check(fields: Seq[NameTypeTag]): Unit = {
+  def check(fields: Seq[NameTypeTag], language: Language): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
 
     def rec(t: Template, complex: Boolean = true): Unit = {
@@ -166,10 +166,13 @@ sealed trait Template {
           s match {
             case Template.Keyword(str) =>
               if (str.isEmpty) throw StructureException.BlankConstants()
+              language.keywords.add(str)
             case Template.Delimiter(str) =>
               if (str.isEmpty) throw StructureException.BlankConstants()
+              language.delimiters.add(str)
             case Template.Separator(str) =>
               if (str.isEmpty) throw StructureException.BlankConstants()
+              language.separators.add(str)
             case Template.Pad | Template.LeftPad | Template.RightPad =>
           }
         case f: Template.FieldRef =>
@@ -321,10 +324,20 @@ object Type {
 
 case class Language(types: Seq[Type], root: TypeTag) {
   /** MEDIT_EXTRA_START **/
+
+  private[structure] val delimiters = mutable.Set[String]()
+  private[structure] val separators = mutable.Set[String]()
+  private[structure] val keywords = mutable.Set[String]()
+
   if (types.exists(_.name.isEmpty)) throw StructureException.EmptyName()
   if (!utils.unique(types.map(_.name))) throw StructureException.DuplicateName()
-  types.foreach(_.check(types))
+  types.foreach(_.check(types, this))
   root.check(types)
+
+  println("delimiters: " + delimiters.mkString(" "))
+  println("separators: " + separators.mkString(" "))
+  println("keywords: " + keywords.mkString(" "))
+
   /** MEDIT_EXTRA_END **/
 }
 
