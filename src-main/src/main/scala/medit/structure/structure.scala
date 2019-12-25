@@ -126,8 +126,7 @@ sealed trait Type {
       if (record.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(record.fields.map(_.name))) throw StructureException.DuplicateName()
       record.fields.foreach(_.tag.check(types))
-      record.template.foreach(_.check(record.fields, language))
-      record.defaultTemplate.check(record.fields, language)
+      record.templateOrDefault.check(record.fields, language)
     case sum: Type.Sum =>
       if (sum.cases.exists(_.name.isEmpty)) throw StructureException.EmptyName()
       if (!utils.unique(sum.cases.map(_.name))) throw StructureException.DuplicateName()
@@ -135,8 +134,7 @@ sealed trait Type {
         if (a.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
         if (!utils.unique(a.fields.map(_.name))) throw StructureException.DuplicateName()
         a.fields.foreach(_.tag.check(types))
-        a.template.foreach(_.check(a.fields, language))
-        a.defaultTemplate.check(a.fields, language)
+        a.templateOrDefault.check(a.fields, language)
       })
   }
 
