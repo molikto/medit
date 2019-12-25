@@ -93,9 +93,6 @@ object NameTypeTag {
   implicit val rw: RW[NameTypeTag] = macroRW
 }
 
-sealed trait Branch
-
-
 
 case class Case(name: String, fields: Seq[NameTypeTag], template: Option[Template] = None) {
   /** MEDIT_EXTRA_START **/
@@ -268,7 +265,12 @@ object Template {
 
 
   @upickle.implicits.key("str_field")
-  case class StrField(name: String, style: String) extends FieldRef
+  case class StrField(name: String, style: String) extends FieldRef {
+    val styleResolved = TextStyle.resolve(style) match {
+      case Some(value) => value
+      case None => throw StructureException.UnknownTextStyle()
+    }
+  }
 
   @upickle.implicits.key("field")
   case class Field(name: String) extends FieldRef

@@ -216,6 +216,10 @@ object Node {
           new LineFrag.Text(str, TextStyle.delimiters)
         case f: Template.Field =>
           childs(f.index).layout(width, widthDown, forceLinear)
+        case f: Template.StrField =>
+          val node = dependentCast[Node.Str](childs(f.index))
+          node.style = f.styleResolved
+          node.layout(width, widthDown, forceLinear)
         case Template.Compose(content) =>
           layoutCompose(content, width, widthDown, forceLinear)
         case Template.Unfold(c) =>
@@ -353,7 +357,8 @@ object Node {
   class Str(
       override protected var _parent: Node
   ) extends EditableLeaf {
-    val style = TextStyle.reference
+    // this is modified when layout, not ideal but ok
+    var style = TextStyle.default
     override def save(): Value = ujson.Str(buffer)
 
     def init(str: String): Node = {

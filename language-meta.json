@@ -64,8 +64,9 @@
           ],
           "template": [
             {
-              "$type": "field",
-              "name": "name"
+              "$type": "str_field",
+              "name": "name",
+              "style": "reference"
             }
           ]
         }
@@ -94,8 +95,9 @@
           "$type": "compose",
           "content": [
             {
-              "$type": "field",
-              "name": "name"
+              "$type": "str_field",
+              "name": "name",
+              "style": "declare"
             },
             {
               "$type": "separator",
@@ -152,8 +154,9 @@
               "$type": "pad"
             },
             {
-              "$type": "field",
-              "name": "name"
+              "$type": "str_field",
+              "name": "name",
+              "style": "declare"
             },
             {
               "$type": "tree",
@@ -257,8 +260,9 @@
                   "$type": "pad"
                 },
                 {
-                  "$type": "field",
-                  "name": "name"
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "declare"
                 },
                 {
                   "$type": "tree",
@@ -323,8 +327,9 @@
                   "$type": "pad"
                 },
                 {
-                  "$type": "field",
-                  "name": "name"
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "declare"
                 },
                 {
                   "$type": "pad"
@@ -389,6 +394,28 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "keyword"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "str",
+                  "style": "const"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -402,6 +429,78 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "unfold"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "reference"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "str_field",
+          "fields": [
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            },
+            {
+              "name": "style",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "str_field"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "reference"
+                },
+                {
+                  "$type": "separator",
+                  "str": ","
+                },
+                {
+                  "$type": "str_field",
+                  "name": "style",
+                  "style": "const"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -415,6 +514,28 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "field"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "reference"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -502,6 +623,28 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "delimiter"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "str",
+                  "style": "const"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -515,6 +658,28 @@
             }
           ],
           "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "separator"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "str",
+                  "style": "const"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         }
       ]
