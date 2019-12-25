@@ -1,6 +1,7 @@
 package medit.structure
 
 import medit.draw.TextStyle
+import medit.structure.TypeTag.Primitive
 import medit.utils
 import upickle.default.{macroRW, ReadWriter => RW}
 
@@ -17,6 +18,7 @@ object StructureException {
   case class OnlySimple() extends StructureException
 
   case class DuplicateFieldInTemplate() extends StructureException
+  case class MissingFieldInTemplate() extends StructureException
 
   case class DuplicateName() extends StructureException
 
@@ -172,14 +174,13 @@ sealed trait Template {
           if (!complex) throw StructureException.OnlySimple()
           f.index = fields.indexWhere(_.name == f.name)
           if (f.index == -1) throw StructureException.UnknownField()
-          if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
-          remaining.remove(f.name)
+          if (!remaining.remove(f.name)) throw StructureException.DuplicateFieldInTemplate()
           f match {
-            case StrField(name, style) =>
-            case Field(name) =>
-            case ColField(name, sep) =>
+            case StrField(_, _) =>
+            case Field(_) =>
+            case ColField(_, sep) =>
               rec(sep, complex = false)
-            case ColTree(b1, name, sep, b2) =>
+            case ColTree(b1, _, sep, b2) =>
               rec(b1, complex = false)
               rec(sep, complex = false)
               rec(b2, complex = false)
@@ -195,8 +196,10 @@ sealed trait Template {
 
       }
     }
-
     rec(this)
+    if (remaining.nonEmpty) {
+      throw StructureException.MissingFieldInTemplate()
+    }
   }
 
   /** MEDIT_EXTRA_END **/

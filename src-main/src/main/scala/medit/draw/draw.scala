@@ -82,7 +82,7 @@ object Typeface {
   case object Mono extends Typeface
 }
 
-case class TextStyle(color: Int, typeface: Typeface, size: Int) {
+case class TextStyle(color: Int, typeface: Typeface, size: Int, bgColor: Int = 0) {
   def measure(text: String) = impl.measure(this, text)
   lazy val unit = measure(" ")
 }
@@ -99,8 +99,8 @@ object TextStyle {
 
   val keyword = TextStyle(0xFFCC7832, Typeface.Mono, 13)
   val choice = TextStyle(0xFFFFC66D, Typeface.Mono, 13)
-  val reference = TextStyle(0xFFb9acbf, Typeface.Mono, 13)
-  val declare = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
+  val declare = TextStyle(0xFFA9B7C6, Typeface.Mono, 13, bgColor = 0xFF3C3F41)
+  val reference = TextStyle(0xFFA9B7C6, Typeface.Mono, 13)
   val const = TextStyle(0xFF6A8759, Typeface.Mono, 13)
   val delimiters = TextStyle(0xFF787878, Typeface.Mono, 13)
   val error = TextStyle(0xFFAA0000, Typeface.Mono, 13)

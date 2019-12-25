@@ -225,6 +225,18 @@ class Window extends Canvas {
 
 
   override def draw(text: String, style: TextStyle, left: Float, top: Float): Unit = {
+    if (style.bgColor != 0) {
+      val paint = paints.shape
+      sk_paint_set_color(paint, style.bgColor)
+      // FIXME reuse ones measured before?
+      val measure = style.measure(text)
+      val r = shapes.rect
+      r.top((top + -measure.y) * dp)
+      r.bottom((top + measure.my) * dp)
+      r.left(left * dp)
+      r.right((left + measure.width) * dp)
+      sk_canvas_draw_rect(canvas, r, paint)
+    }
     val paint = paints.text
     sk_paint_set_color(paint, style.color)
     sk_paint_set_textsize(paint, style.size * dp)
