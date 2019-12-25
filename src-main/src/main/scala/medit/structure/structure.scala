@@ -255,7 +255,6 @@ object Template {
   @upickle.implicits.key("separator")
   case class Separator(str: String) extends Simple
 
-  // TODO pads and seperators has different insertion point behaviour, but this is fine? MPS is similar
   @upickle.implicits.key("pad")
   case object Pad extends Simple
 

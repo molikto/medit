@@ -33,7 +33,7 @@ sealed trait NonAtomicFrag extends Frag {
   def finishInner(canvas: Page): Unit
 
   final override def finish(canvas: Page): Unit = {
-    // TODO we remember pos before but it is not that sound
+    // FIXME we remember pos before but it is not that sound, instead we should do a second pass of lines
     finishInner(canvas)
   }
 }
