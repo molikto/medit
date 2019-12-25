@@ -10,8 +10,6 @@ sealed trait StructureException extends Exception
 
 object StructureException {
 
-  case class UnfoldNotSupported() extends StructureException
-
   case class CannotUnfold() extends StructureException
 
   case class UnknownField() extends StructureException
@@ -158,7 +156,7 @@ sealed trait Template {
   def check(fields: Seq[NameTypeTag]): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
 
-    def rec(t: Template, unfold: Boolean = false, complex: Boolean = true): Unit = {
+    def rec(t: Template, complex: Boolean = true): Unit = {
       t match {
         case s: Template.Simple =>
           s match {
@@ -172,30 +170,25 @@ sealed trait Template {
           }
         case f: Template.FieldRef =>
           if (!complex) throw StructureException.OnlySimple()
-          f match {
-            case Template.Unfold(_) =>
-              if (!unfold) throw StructureException.UnfoldNotSupported()
-            case _ =>
-          }
           f.index = fields.indexWhere(_.name == f.name)
           if (f.index == -1) throw StructureException.UnknownField()
           if (!remaining.contains(f.name)) throw StructureException.DuplicateFieldInTemplate()
           remaining.remove(f.name)
+          f match {
+            case StrField(name, style) =>
+            case Field(name) =>
+            case ColField(name, sep) =>
+              rec(sep, complex = false)
+            case ColTree(b1, name, sep, b2) =>
+              rec(b1, complex = false)
+              rec(sep, complex = false)
+              rec(b2, complex = false)
+          }
         case Template.Compose(content) =>
           content.foreach(a => rec(a, complex))
         case Template.Tree(b1, content, sep, b2) =>
           if (!complex) throw StructureException.OnlySimple()
-          content match {
-            case Seq(f@Template.Unfold(_)) =>
-              rec(f, true)
-              fields(f.index).tag match {
-                case coll: TypeTag.Coll =>
-                case _ =>
-                  throw StructureException.CannotUnfold()
-              }
-            case _ =>
-              content.foreach(a => rec(a))
-          }
+          content.foreach(a => rec(a))
           rec(b1, complex = false)
           rec(sep, complex = false)
           rec(b2, complex = false)
@@ -275,10 +268,12 @@ object Template {
   @upickle.implicits.key("field")
   case class Field(name: String) extends FieldRef
 
-  @upickle.implicits.key("unfold")
-  case class Unfold(name: String) extends FieldRef
+  @upickle.implicits.key("col_field")
+  case class ColField(name: String, sep: Template) extends FieldRef
 
-  //case class Opt(before: Seq[Template], name: String, after: Seq[Template]) extends FieldRef
+  @upickle.implicits.key("col_tree")
+  case class ColTree(b1: Template, name: String, sep: Template, b2: Template) extends FieldRef
+
   @upickle.implicits.key("tree")
   case class Tree(b1: Template, content: Seq[Template], sep: Template, b2: Template) extends Template
 
@@ -294,7 +289,8 @@ object Template {
     macroRW[StrField],
     macroRW[Field],
     macroRW[Separator],
-    macroRW[Unfold],
+    macroRW[ColTree],
+    macroRW[ColField],
     macroRW[LeftPad.type],
     macroRW[RightPad.type],
     macroRW[Pad.type]

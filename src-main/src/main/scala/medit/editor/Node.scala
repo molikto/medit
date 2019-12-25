@@ -32,6 +32,7 @@ sealed trait Node {
   var fragWidthDown: Float = -1
   var fragForceLinear: Boolean = false
 
+  def layoutForceLinear() = dependentCast[LineFrag](layout(0, 0, true))
   // calculate frags
   def layout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
     if (frag != null && (fragWidth != width || fragWidthDown != widthDown || fragForceLinear != forceLinear)) {
@@ -168,7 +169,7 @@ object Node {
           }
         }
         val endFrag1 = {
-          val removedPadding = end.removeRightPad()
+          val removedPadding = end.removeLeftPad()
           if (removedPadding != end) {
             layoutLinear(removedPadding)
           } else {
@@ -211,30 +212,30 @@ object Node {
           // we cannot use LineFrag.Pad here, as they create extra insertion point
           new LineFrag.Text(name, TextStyle.delimiters, pad = unit)
         case Template.Pad | Template.LeftPad | Template.RightPad  =>
-          new LineFrag.Pad(TextStyle.delimiters.unit.width)
+          new LineFrag.Pad(TextStyle.delimiters.unit.width * 0.75F)
         case Template.Delimiter(str) =>
           new LineFrag.Text(str, TextStyle.delimiters)
+        case Template.Compose(content) =>
+          layoutCompose(content, width, widthDown, forceLinear)
         case f: Template.Field =>
           childs(f.index).layout(width, widthDown, forceLinear)
         case f: Template.StrField =>
           val node = dependentCast[Node.Str](childs(f.index))
           node.style = f.styleResolved
           node.layout(width, widthDown, forceLinear)
-        case Template.Compose(content) =>
-          layoutCompose(content, width, widthDown, forceLinear)
-        case Template.Unfold(c) =>
-          logicError()
+        case f@Template.ColField(_, sep) =>
+          val node = dependentCast[Node.Collection](childs(f.index))
+          node.style = Left(f)
+          node.layout(width, widthDown, forceLinear)
         case Template.Tree(b1, content, sep, b2) =>
           // when measuring childs, we assume that the size avaliable is using widthDown
           val wd = widthDown - Node.DefaultIndent
-          val cons = content match {
-            case Seq(f@Template.Unfold(_)) =>
-              val c = dependentCast[Collection](childs(f.index))
-              c.childs.map(_.layout(wd, wd, forceLinear))
-            case _ =>
-              content.map(a => layout(a, wd, wd, forceLinear))
-          }
+          val cons = content.map(a => layout(a, wd, wd, forceLinear))
           layoutTree(b1, cons, sep, b2, width, forceLinear)
+        case f@Template.ColTree(b1, _, sep, b2) =>
+          val node = dependentCast[Node.Collection](childs(f.index))
+          node.style = Right(f)
+          node.layout(width, widthDown, forceLinear)
       }
     }
   }
@@ -270,7 +271,31 @@ object Node {
       override protected var _parent: Node,
       val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
 
-//    override def tryNewChild(): Int = {
+    var style: Either[Template.ColField, Template.ColTree] = null
+
+    def layoutFlat(sep: Template): LineFrag =
+      new LineFrag.Compose(childs.map(_.layoutForceLinear()).flatMap(a => Seq(a, layoutLinear(sep))))
+
+    override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
+      if (style == null) {
+        style = Right(Template.ColTree(Template.Delimiter("["), "", Template.Delimiter(","), Template.Delimiter("]")))
+      }
+      style match {
+        case Left(value) =>
+          layoutFlat(value.sep)
+        case Right(value) =>
+          val wd = widthDown - Node.DefaultIndent
+          val cons = childs.map(_.layout(wd, wd, forceLinear))
+          if (cons.isEmpty) {
+            // FIXME we assume that these are optional now
+            new LineFrag.Compose(Seq.empty)
+          } else {
+            layoutTree(value.b1, cons, value.sep, value.b2, width, forceLinear)
+          }
+      }
+    }
+
+    //    override def tryNewChild(): Int = {
 //      // TODO check collection type and size limit
 //      _childs.append(default(this, language, sort.item))
 //      _childs.size - 1
@@ -288,16 +313,6 @@ object Node {
 
     override def save(): Value = {
       ujson.Arr.from(childs.map(_.save()))
-    }
-
-
-    override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      val left = Template.Delimiter("[")
-      val sep = Template.Separator(",")
-      val end = Template.Delimiter("]")
-      val wd = widthDown - Node.DefaultIndent
-      val cs = childs.map(_.layout(wd, wd, forceLinear))
-      layoutTree(left, cs, sep, end, width, forceLinear)
     }
   }
 

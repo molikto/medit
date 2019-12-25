@@ -159,21 +159,12 @@
               "style": "declare"
             },
             {
-              "$type": "tree",
+              "$type": "col_tree",
               "b1": {
                 "$type": "delimiter",
                 "str": "("
               },
-              "content": [
-                {
-                  "$type": "field",
-                  "name": "fields"
-                },
-                {
-                  "$type": "field",
-                  "name": "template"
-                }
-              ],
+              "name": "fields",
               "sep":
                 {
                   "$type": "separator",
@@ -183,6 +174,42 @@
               "b2": {
                 "$type": "delimiter",
                 "str": ")"
+              }
+            },
+            {
+              "$type": "col_tree",
+              "b1": {
+                "$type": "compose",
+                "content": [
+                  {
+                    "$type": "pad"
+                  },
+                  {
+                    "$type": "delimiter",
+                    "str": "{"
+                  },
+                  {
+                    "$type": "right_pad"
+                  }
+                ]
+              },
+              "b2": {
+                "$type": "compose",
+                "content": [
+                  {
+                    "$type": "left_pad"
+                  },
+                  {
+                    "$type": "delimiter",
+                    "str": "}"
+                  }
+                ]
+              },
+              "name": "template",
+              "sep":
+              {
+                "$type": "separator",
+                "str": ";"
               }
             }
           ]
@@ -265,30 +292,57 @@
                   "style": "declare"
                 },
                 {
-                  "$type": "tree",
+                  "$type": "col_tree",
                   "b1": {
                     "$type": "delimiter",
                     "str": "("
                   },
-                  "content": [
-                    {
-                      "$type": "field",
-                      "name": "fields"
-                    },
-                    {
-                      "$type": "field",
-                      "name": "template"
-                    }
-                  ],
+                  "name": "fields",
                   "sep":
-                    {
-                      "$type": "separator",
-                      "str": ","
-                    }
-                  ,
+                  {
+                    "$type": "separator",
+                    "str": ","
+                  }
+                ,
                   "b2": {
                     "$type": "delimiter",
                     "str": ")"
+                  }
+                },
+                {
+                  "$type": "col_tree",
+                  "b1": {
+                    "$type": "compose",
+                    "content": [
+                      {
+                        "$type": "pad"
+                      },
+                      {
+                        "$type": "delimiter",
+                        "str": "{"
+                      },
+                      {
+                        "$type": "right_pad"
+                      }
+                    ]
+                  },
+                  "b2": {
+                    "$type": "compose",
+                    "content": [
+                      {
+                        "$type": "left_pad"
+                      },
+                      {
+                        "$type": "delimiter",
+                        "str": "}"
+                      }
+                    ]
+                  },
+                  "name": "template",
+                  "sep":
+                  {
+                    "$type": "separator",
+                    "str": ";"
                   }
                 }
               ]
@@ -335,7 +389,7 @@
                   "$type": "pad"
                 },
                 {
-                  "$type": "tree",
+                  "$type": "col_tree",
                   "b1": {
                     "$type": "compose",
                     "content": [
@@ -348,18 +402,6 @@
                       }
                     ]
                   },
-                  "content": [
-                    {
-                      "$type": "unfold",
-                      "name": "cases"
-                    }
-                  ],
-                  "sep":
-                    {
-                      "$type": "separator",
-                      "str": ";"
-                    }
-                  ,
                   "b2": {
                     "$type": "compose",
                     "content": [
@@ -371,7 +413,12 @@
                         "str": "}"
                       }
                     ]
-                  }
+                  },
+                  "name": "cases",
+                  "sep": {
+                      "$type": "separator",
+                      "str": ";"
+                    }
                 }
               ]
             }
@@ -383,49 +430,22 @@
       "$type": "sum",
       "name": "template",
       "cases": [
+
         {
-          "name": "keyword",
-          "fields": [
-            {
-              "name": "str",
-              "tag": {
-                "$type": "str"
-              }
-            }
-          ],
-          "template": [
-            {
-              "$type": "compose",
-              "content" : [
-                {
-                  "$type": "keyword",
-                  "str": "keyword"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": "("
-                },
-                {
-                  "$type": "str_field",
-                  "name": "str",
-                  "style": "const"
-                },
-                {
-                  "$type": "delimiter",
-                  "str": ")"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "name": "unfold",
+          "name": "col_field",
           "fields": [
             {
               "name": "name",
               "tag": {
                 "$type": "str"
               }
+            },
+            {
+              "name": "sep",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
             }
           ],
           "template": [
@@ -434,7 +454,7 @@
               "content" : [
                 {
                   "$type": "keyword",
-                  "str": "unfold"
+                  "str": "col_field"
                 },
                 {
                   "$type": "delimiter",
@@ -444,6 +464,14 @@
                   "$type": "str_field",
                   "name": "name",
                   "style": "reference"
+                },
+                {
+                  "$type": "separator",
+                  "str": ","
+                },
+                {
+                  "$type": "field",
+                  "name": "sep"
                 },
                 {
                   "$type": "delimiter",
@@ -551,6 +579,113 @@
                 }
               }
             }
+          ],
+          "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "compose"
+                },
+                {
+                  "$type": "col_tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "name": "content",
+                  "sep": {
+                    "$type": "delimiter",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "col_tree",
+          "fields": [
+            {
+              "name": "b1",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "name",
+              "tag": {
+                "$type": "str"
+              }
+            },
+            {
+              "name": "sep",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "b2",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            }
+          ],
+          "template": [
+            {
+              "$type": "compose",
+              "content": [
+                {
+                  "$type": "keyword",
+                  "str": "col_tree"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "field",
+                  "name": "b1"
+                },
+                {
+                  "$type": "separator",
+                  "str": ","
+                },
+                {
+                  "$type": "str_field",
+                  "name": "name",
+                  "style": "reference"
+                },
+                {
+                  "$type": "separator",
+                  "str": ","
+                },
+                {
+                  "$type": "field",
+                  "name": "sep"
+                },
+                {
+                  "$type": "separator",
+                  "str": ","
+                },
+                {
+                  "$type": "field",
+                  "name": "b2"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
           ]
         },
         {
@@ -629,6 +764,41 @@
                 {
                   "$type": "keyword",
                   "str": "delimiter"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": "("
+                },
+                {
+                  "$type": "str_field",
+                  "name": "str",
+                  "style": "const"
+                },
+                {
+                  "$type": "delimiter",
+                  "str": ")"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "keyword",
+          "fields": [
+            {
+              "name": "str",
+              "tag": {
+                "$type": "str"
+              }
+            }
+          ],
+          "template": [
+            {
+              "$type": "compose",
+              "content" : [
+                {
+                  "$type": "keyword",
+                  "str": "keyword"
                 },
                 {
                   "$type": "delimiter",
