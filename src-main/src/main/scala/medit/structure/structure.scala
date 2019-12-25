@@ -20,6 +20,8 @@ object StructureException {
   case class DuplicateFieldInTemplate() extends StructureException
   case class MissingFieldInTemplate() extends StructureException
 
+  case class ComposeShouldHaveMoreThanOneChildren() extends StructureException
+
   case class DuplicateName() extends StructureException
 
   case class EmptyName() extends StructureException
@@ -281,7 +283,9 @@ object Template {
   case class Tree(b1: Template, content: Seq[Template], sep: Template, b2: Template) extends Template
 
   @upickle.implicits.key("compose")
-  case class Compose(content: Seq[Template]) extends Template
+  case class Compose(content: Seq[Template]) extends Template {
+    if (content.size < 2) throw StructureException.ComposeShouldHaveMoreThanOneChildren()
+  }
 
 
   implicit val rw: RW[Template] = RW.merge(
