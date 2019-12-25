@@ -74,6 +74,7 @@ then from the template, it generates `Frag`, and it is used for layout purpose.
 then we add ways to resolve insert point from mouse.
 
 * NEXT
+   * handle optional, non-delimited trees, array-fields etc.
    * handle all insertion points
       * what user types? separators, delimiters, keyword, choice, const
    * handle keyboard up, down, right, left

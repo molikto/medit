@@ -64,7 +64,7 @@ object Node {
       }))
     }
     a match {
-      case str@TypeTag.Str(style) => new Str(parent, str.style).init(data.str)
+      case TypeTag.Str => new Str(parent).init(data.str)
       case coll: TypeTag.Coll =>
         val col = new Collection(parent, language, coll)
         col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
@@ -90,7 +90,7 @@ object Node {
   }
 
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
-    case s@TypeTag.Str(_) => new Str(parent, s.style)
+    case TypeTag.Str => new Str(parent)
     case coll: TypeTag.Coll => new Collection(parent, language, coll)
     case n: TypeTag.Ref =>
       if (n.index == -1) {
@@ -351,14 +351,12 @@ object Node {
   }
 
   class Str(
-      override protected var _parent: Node,
-      val style: TextStyle
+      override protected var _parent: Node
   ) extends EditableLeaf {
+    val style = TextStyle.reference
+    override def save(): Value = ujson.Str(buffer)
 
-
-  override def save(): Value = ujson.Str(buffer)
-
-  def init(str: String): Node = {
+    def init(str: String): Node = {
       buffer = str
       this
     }

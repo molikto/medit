@@ -36,7 +36,7 @@ object StructureException {
 sealed trait TypeTag {
   /** MEDIT_EXTRA_START **/
   def check(types: Seq[Type]): Unit = this match {
-    case TypeTag.Str(style) =>
+    case _: TypeTag.Primitive =>
     case TypeTag.Opt(tt) => tt.check(types)
     case TypeTag.Arr(tt) => tt.check(types)
     case TypeTag.Bag(tt) => tt.check(types)
@@ -61,13 +61,11 @@ object TypeTag {
     }
   }
 
+  sealed trait Primitive extends TypeTag
+
   /** MEDIT_EXTRA_END **/
   @upickle.implicits.key("str")
-  case class Str(name: String) extends TypeTag {
-    val style = if (name.isEmpty) TextStyle.const else TextStyle.resolve(name) match {
-      case Some(a) => a
-      case _ => throw StructureException.UnknownTextStyle()
-    }
+  case object Str extends Primitive {
   }
 
   @upickle.implicits.key("opt")
@@ -86,7 +84,7 @@ object TypeTag {
     /** MEDIT_EXTRA_END **/
   }
 
-  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
+  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str.type], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
 }
 
 case class NameTypeTag(name: String, tag: TypeTag)
@@ -94,6 +92,10 @@ case class NameTypeTag(name: String, tag: TypeTag)
 object NameTypeTag {
   implicit val rw: RW[NameTypeTag] = macroRW
 }
+
+sealed trait Branch
+
+
 
 case class Case(name: String, fields: Seq[NameTypeTag], template: Option[Template] = None) {
   /** MEDIT_EXTRA_START **/
@@ -264,6 +266,10 @@ object Template {
   @upickle.implicits.key("right_pad")
   case object RightPad extends Simple
 
+
+  @upickle.implicits.key("str_field")
+  case class StrField(name: String, style: String) extends FieldRef
+
   @upickle.implicits.key("field")
   case class Field(name: String) extends FieldRef
 
@@ -278,8 +284,19 @@ object Template {
   case class Compose(content: Seq[Template]) extends Template
 
 
-  implicit val rw: RW[Template] = RW.merge(macroRW[Compose], macroRW[Keyword], macroRW[Delimiter], macroRW[Tree], macroRW[Field], macroRW[Separator], macroRW[Unfold], macroRW[LeftPad.type], macroRW[RightPad.type], macroRW[Pad.type])
-
+  implicit val rw: RW[Template] = RW.merge(
+    macroRW[Compose],
+    macroRW[Keyword],
+    macroRW[Delimiter],
+    macroRW[Tree],
+    macroRW[StrField],
+    macroRW[Field],
+    macroRW[Separator],
+    macroRW[Unfold],
+    macroRW[LeftPad.type],
+    macroRW[RightPad.type],
+    macroRW[Pad.type]
+  )
 }
 
 object Type {
