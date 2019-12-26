@@ -25,12 +25,12 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     val timeLayout = System.currentTimeMillis()
     canvas.save()
     canvas.translate(scrollX.toFloat, scrollY.toFloat)
+    lines.render(canvas)
     mode match {
       case Mode.Insert(index) =>
         val rect = lines.get(index).rect
-        canvas.draw(Rect(rect.left, rect.top, 3, rect.height), ShapeStyle.cursor)
+        canvas.draw(Rect(rect.left, rect.top, rect.width + 3, rect.height), ShapeStyle.cursor)
     }
-    lines.render(canvas)
     canvas.restore()
     val timeDraw = System.currentTimeMillis()
 
@@ -63,14 +63,34 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
   def onChar(codepoint: Codepoint, mods: Mods): Unit = mode match {
     case Mode.Insert(a) =>
       val texts = lines.get(a).pos
-      if (codepoint == ' ') {
-      } else {
-        if (texts.exists(p => p.text.editable && p.pos > 0 && p.pos < p.text.size)) {
-          assert(texts.size == 1)
-          val p = texts.head
-          p.text.node.appendEdit(codepoint, p.pos)
-          mode = Mode.Insert(a.inc)
-        }
+      def insertChar(node: Node.EditableLeaf, pos: Int): Unit = {
+        node.appendEdit(codepoint, pos)
+        mode = Mode.Insert(a + 1)
+      }
+      texts match {
+        case PosInfo.MiddleOf(left, right) =>
+          var done = false
+          if (left != null) {
+            left.resolve() match {
+              case JustStringNode(node) =>
+                done = true
+                insertChar(node, node.text.size)
+              case _ =>
+            }
+          }
+          if (!done && right != null) {
+            right.resolve() match {
+              case JustStringNode(node) =>
+                done = true
+                insertChar(node, 0)
+            }
+          }
+        case PosInfo.Inside(text, pos) =>
+          text.resolve() match {
+            case JustStringNode(node) =>
+              insertChar(node, pos)
+            case _ =>
+          }
       }
   }
 
@@ -79,7 +99,43 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     if (action == 1) {
       mode match {
         case Mode.Insert(a) =>
-          if (key == Key.Backspace) {
+          val texts = lines.get(a).pos
+          key match {
+            case Key.Backspace =>
+              val lefty = texts.lefty
+              if (lefty != null) {
+                lefty._1.resolve() match {
+                  case JustStringNode(node) =>
+                    node.backspaceEdit(lefty._2)
+                    mode = Mode.Insert(a - 1)
+                  case _ =>
+                }
+              }
+            case Key.Enter =>
+              texts match {
+                case PosInfo.MiddleOf(left, right) =>
+                  if (left != null) {
+                    val rv = left.resolve()
+                    rv match {
+                      case PartOfCollection.B1(node) =>
+                        node.insertNewAt(0)
+                      case PartOfCollection.SeparatorAt(node, index) =>
+                        node.insertNewAt(index)
+                      case _ =>
+                        if (rv.lastOfNode) {
+                          rv.node.parent match {
+                            case node: Node.Collection =>
+                              node.insertNewAt(node.childs.indexOf(rv.node) + 1)
+                            case _ =>
+                          }
+                        } else {
+
+                        }
+                    }
+                  }
+                case _ =>
+              }
+            case _ =>
           }
       }
     }

@@ -179,31 +179,12 @@
             {
               "$type": "col_tree",
               "b1": {
-                "$type": "compose",
-                "content": [
-                  {
-                    "$type": "pad"
-                  },
-                  {
-                    "$type": "delimiter",
-                    "str": "{"
-                  },
-                  {
-                    "$type": "right_pad"
-                  }
-                ]
+                "$type": "separator",
+                "str": "{"
               },
               "b2": {
-                "$type": "compose",
-                "content": [
-                  {
-                    "$type": "left_pad"
-                  },
-                  {
-                    "$type": "delimiter",
-                    "str": "}"
-                  }
-                ]
+                "$type": "separator",
+                "str": "}"
               },
               "name": "template",
               "sep":
@@ -363,31 +344,12 @@
                 {
                   "$type": "col_tree",
                   "b1": {
-                    "$type": "compose",
-                    "content": [
-                      {
-                        "$type": "pad"
-                      },
-                      {
-                        "$type": "delimiter",
-                        "str": "{"
-                      },
-                      {
-                        "$type": "right_pad"
-                      }
-                    ]
+                    "$type": "separator",
+                    "str": "{"
                   },
                   "b2": {
-                    "$type": "compose",
-                    "content": [
-                      {
-                        "$type": "left_pad"
-                      },
-                      {
-                        "$type": "delimiter",
-                        "str": "}"
-                      }
-                    ]
+                    "$type": "separator",
+                    "str": "}"
                   },
                   "name": "template",
                   "sep": {
@@ -436,33 +398,14 @@
                   "style": "declare"
                 },
                 {
-                  "$type": "pad"
-                },
-                {
                   "$type": "col_tree",
                   "b1": {
-                    "$type": "compose",
-                    "content": [
-                      {
-                        "$type": "delimiter",
-                        "str": "{"
-                      },
-                      {
-                        "$type": "right_pad"
-                      }
-                    ]
+                    "$type": "separator",
+                    "str": "{"
                   },
                   "b2": {
-                    "$type": "compose",
-                    "content": [
-                      {
-                        "$type": "left_pad"
-                      },
-                      {
-                        "$type": "delimiter",
-                        "str": "}"
-                      }
-                    ]
+                    "$type": "separator",
+                    "str": "}"
                   },
                   "name": "cases",
                   "sep": {
@@ -854,21 +797,7 @@
           ]
         },
         {
-          "name": "right_pad",
-          "fields": [
-          ],
-          "template": [
-          ]
-        },
-        {
           "name": "pad",
-          "fields": [
-          ],
-          "template": [
-          ]
-        },
-        {
-          "name": "left_pad",
           "fields": [
           ],
           "template": [

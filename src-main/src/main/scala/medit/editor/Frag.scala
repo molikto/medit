@@ -17,6 +17,7 @@ import medit.utils._
  */
 sealed trait Frag {
 
+
   def finish(canvas: Page): Unit
 
   def frags: Seq[Frag]
@@ -24,6 +25,25 @@ sealed trait Frag {
 
   // set by parents
   var parent: Frag = null
+
+  var node: Node = null
+
+  def parentNode(): Node = if (node == null) parent.parentNode() else node
+
+  protected def bone0(): Seq[Frag] = if (this.node != null) Seq(this) else bone()
+
+  def bone(): Seq[Frag] = this match {
+    case compose: LineFrag.Compose =>
+      compose.frags.flatMap(_.bone0())
+    case compose: BlockFrag.Compose =>
+      compose.frags.flatMap(_.bone0())
+    case tree: BlockFrag.Tree =>
+      tree.start.bone0() ++ tree.center.flatMap(_.bone0()) ++ tree.end.bone0()
+    case text: LineFrag.Text =>
+      Seq(text)
+    case _: LineFrag.Pad =>
+      Seq.empty
+  }
 }
 
 sealed trait NonAtomicFrag extends Frag {
@@ -56,10 +76,34 @@ object LineFrag {
   class Text(
       val text: String,
       val style: TextStyle,
-      @nullable val node: Node.EditableLeaf = null,
+      val emptyAsQuestionMark: Boolean = false,
       val hideInLineEnd: Boolean = false,
       val pad: Float = 0) extends Atomic {
-    def editable: Boolean = node != null
+
+    def resolve(): FragPart = {
+      parentNode() match {
+        case node: Node.Structure =>
+          val bone = node.frag.bone()
+          PartOfStructure.ConstantAt(node, bone.indexOf(this), bone.size)
+        case node: Node.Collection =>
+          val bone = node.frag.bone()
+          if (this == bone.head) {
+            PartOfCollection.B1(node)
+          } else if (this == bone.last) {
+            PartOfCollection.B2(node)
+          } else {
+            val bs = bone.dropWhile(_.node == null)
+            val index = bs.indexOf(this)
+            if (index % 2 != 1) {
+              logicError()
+            }
+            PartOfCollection.SeparatorAt(node, index / 2)
+          }
+        case leaf: Node.EditableLeaf =>
+          assert(leaf == node)
+          JustStringNode(leaf)
+      }
+    }
 
     def size: Int = text.size
 
@@ -70,11 +114,20 @@ object LineFrag {
       else style.measure(text.take(small)).width + pad
 
     lazy val measure = {
-      val res = style.measure(text)
-      if (pad == 0) {
-        res
+      if (text.isEmpty && emptyAsQuestionMark) {
+        val res = style.measure("?")
+        if (pad == 0) {
+          res
+        } else {
+          res.copy(width = res.width + pad * 2)
+        }
       } else {
-        res.copy(width = res.width + pad * 2)
+        val res = style.measure(text)
+        if (pad == 0) {
+          res
+        } else {
+          res.copy(width = res.width + pad * 2)
+        }
       }
     }
 
@@ -127,7 +180,7 @@ object BlockFrag {
     override def finishInner(canvas: Page): Unit = frags.foreach(_.finish(canvas))
   }
 
-  class Tree(val pad: Float, start: LineFrag, val center: Seq[Frag], end: LineFrag) extends BlockFrag with NonAtomicFrag {
+  class Tree(val pad: Float, val start: LineFrag, val center: Seq[Frag], val end: LineFrag) extends BlockFrag with NonAtomicFrag {
     override lazy val frags: Seq[Frag] = start +: center :+ end
     setParents()
 

@@ -2,7 +2,7 @@ package medit.structure
 
 import medit.draw.TextStyle
 import medit.structure.TypeTag.Primitive
-import medit.utils
+import medit.utils._
 import upickle.default.{macroRW, ReadWriter => RW}
 
 import scala.collection.mutable
@@ -51,6 +51,7 @@ sealed trait TypeTag {
 }
 
 object TypeTag {
+
 
   /** MEDIT_EXTRA_START **/
   sealed trait Coll extends TypeTag {
@@ -123,16 +124,16 @@ sealed trait Type {
 
   def check(types: Seq[Type], language: Language) = this match {
     case record: Type.Record =>
-      if (record.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
-      if (!utils.unique(record.fields.map(_.name))) throw StructureException.DuplicateName()
+      if (record.fields.exists(_.name.isBlank)) throw StructureException.EmptyName()
+      if (!record.fields.map(_.name).unique) throw StructureException.DuplicateName()
       record.fields.foreach(_.tag.check(types))
       record.templateOrDefault.check(record.fields, language)
     case sum: Type.Sum =>
-      if (sum.cases.exists(_.name.isEmpty)) throw StructureException.EmptyName()
-      if (!utils.unique(sum.cases.map(_.name))) throw StructureException.DuplicateName()
+      if (sum.cases.exists(_.name.isBlank)) throw StructureException.EmptyName()
+      if (!sum.cases.map(_.name).unique) throw StructureException.DuplicateName()
       sum.cases.foreach(a => {
-        if (a.fields.exists(_.name.isEmpty)) throw StructureException.EmptyName()
-        if (!utils.unique(a.fields.map(_.name))) throw StructureException.DuplicateName()
+        if (a.fields.exists(_.name.isBlank)) throw StructureException.EmptyName()
+        if (!a.fields.map(_.name).unique) throw StructureException.DuplicateName()
         a.fields.foreach(_.tag.check(types))
         a.templateOrDefault.check(a.fields, language)
       })
@@ -146,15 +147,6 @@ sealed trait Template {
   /** MEDIT_EXTRA_START **/
 
   import Template._
-  def removeRightPad(): Template = this match {
-    case Template.Compose(Seq(a, RightPad)) => a
-    case _ => this
-  }
-
-  def removeLeftPad(): Template = this match {
-    case Template.Compose(Seq(LeftPad, a)) => a
-    case _ => this
-  }
   def check(fields: Seq[NameTypeTag], language: Language): Unit = {
     val remaining = mutable.Set.from(fields.map(_.name))
 
@@ -163,16 +155,18 @@ sealed trait Template {
         case s: Template.Simple =>
           s match {
             case Template.Keyword(str) =>
-              if (str.isEmpty) throw StructureException.BlankConstants()
+              if (!complex) throw StructureException.OnlySimple()
+              if (str.isBlank) throw StructureException.BlankConstants()
               language.keywords.add(str)
             case Template.Delimiter(str) =>
-              if (str.isEmpty) throw StructureException.BlankConstants()
+              if (str.isBlank) throw StructureException.BlankConstants()
               language.delimiters.add(str)
             case Template.Separator(str, _) =>
-              if (str.isEmpty) throw StructureException.BlankConstants()
+              if (str.isBlank) throw StructureException.BlankConstants()
               language.separators.add(str)
           }
         case _: Template.Pads =>
+          if (!complex) throw StructureException.OnlySimple()
         case f: Template.FieldRef =>
           if (!complex) throw StructureException.OnlySimple()
           f.index = fields.indexWhere(_.name == f.name)
@@ -189,7 +183,8 @@ sealed trait Template {
               rec(b2, complex = false)
           }
         case Template.Compose(content) =>
-          content.foreach(a => rec(a, complex))
+          if (!complex) throw StructureException.OnlySimple()
+          content.foreach(a => rec(a))
         case Template.Tree(b1, content, sep, b2) =>
           if (!complex) throw StructureException.OnlySimple()
           content.foreach(a => rec(a))
@@ -282,13 +277,6 @@ object Template {
   @upickle.implicits.key("pad")
   case object Pad extends Pads
 
-  @upickle.implicits.key("left_pad")
-  case object LeftPad extends Pads
-
-  @upickle.implicits.key("right_pad")
-  case object RightPad extends Pads
-
-
   @upickle.implicits.key("str_field")
   case class StrField(name: String, style: String) extends FieldRef {
     val styleResolved = TextStyle.resolve(style) match {
@@ -325,8 +313,6 @@ object Template {
     macroRW[Separator],
     macroRW[ColTree],
     macroRW[ColField],
-    macroRW[LeftPad.type],
-    macroRW[RightPad.type],
     macroRW[Pad.type]
   )
 }
@@ -353,8 +339,8 @@ case class Language(types: Seq[Type], root: TypeTag) {
   private[structure] val separators = mutable.Set[String]()
   private[structure] val keywords = mutable.Set[String]()
 
-  if (types.exists(_.name.isEmpty)) throw StructureException.EmptyName()
-  if (!utils.unique(types.map(_.name))) throw StructureException.DuplicateName()
+  if (types.exists(_.name.isBlank)) throw StructureException.EmptyName()
+  if (!types.map(_.name).unique) throw StructureException.DuplicateName()
   types.foreach(_.check(types, this))
   root.check(types)
 

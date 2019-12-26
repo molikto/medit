@@ -1,6 +1,7 @@
 package medit.editor
 
 import medit.draw.{Canvas, Rect, ShapeStyle, TextMeasure}
+import medit.editor
 import medit.utils._
 
 import scala.collection.mutable
@@ -9,34 +10,46 @@ import scala.collection.mutable
 // pad and top will be erased after render
 class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag.Atomic]) {
 
-  def get(pos0: Int): (TextMeasure, Seq[TextPos]) = {
+  def get(pos0: Int): (TextMeasure, PosInfo) = {
     var pos = pos0
     var line = 0
-    var ret: (TextMeasure, Seq[TextPos]) = null
+    var ret: (TextMeasure, PosInfo) = null
     var left = 0F
     while (line < items.size && ret == null) {
       val ll = items(line)
       val lsize = ll.size
-      def lpos = new TextPos(dependentCast[LineFrag.Text](ll), pos)
+      def lpos = dependentCast[LineFrag.Text](ll)
       if (lsize == pos) {
         val nn = if (line + 1 < items.size) items(line + 1) else null
-        def rpos = new TextPos(dependentCast[LineFrag.Text](nn), 0)
+        def rpos = dependentCast[LineFrag.Text](nn)
         left += ll.measure.width
-        val mm = ll.measure.copy(width = left)
         (ll, nn) match {
-          case (_: LineFrag.Text, _: LineFrag.Text) =>
-            ret = (ll.measure.avg(nn.measure).copy(width = left), Seq(lpos, rpos))
-          case (_: LineFrag.Text, _) =>
-            ret = (ll.measure.copy(width = left), Seq(lpos))
-          case (_, _: LineFrag.Text) =>
-            ret = (nn.measure.copy(width = left), Seq(rpos))
+          case (l: LineFrag.Text, r: LineFrag.Text) =>
+            if (l.text.isEmpty && r.text.isEmpty) {
+              warn("Two empty text together")
+            }
+            if (l.text.isEmpty) {
+              left -= l.width
+            }
+            ret = (ll.measure.avg(nn.measure).copy(width = left), PosInfo.MiddleOf(lpos, rpos))
+          case (l: LineFrag.Text, _) =>
+            if (l.text.isEmpty) {
+              left -= l.width
+            }
+            ret = (ll.measure.copy(width = left), PosInfo.MiddleOf(lpos, null))
+          case (_, r: LineFrag.Text) =>
+            if (r.text.isEmpty) {
+              ret = (nn.measure.copy(width = left), PosInfo.MiddleOf(rpos, null))
+            } else {
+              ret = (nn.measure.copy(width = left), PosInfo.MiddleOf(null, rpos))
+            }
           case _ =>
             logicError()
         }
       } else if (pos < lsize) {
         ll match {
           case tt: LineFrag.Text =>
-            ret = (ll.measure.copy(width = left + tt.measurePrefix(pos)), Seq(lpos))
+            ret = (ll.measure.copy(width = left + tt.measurePrefix(pos)), editor.PosInfo.Inside(lpos, pos))
           case _ =>
             logicError()
         }
@@ -55,6 +68,14 @@ class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag
     for (i <- items) {
       buffer.append((i, left))
       left += i.width
+    }
+    // FIXME move cursor to safe place after screen resizing & relayouting
+    buffer.last._1 match {
+      case text: LineFrag.Text =>
+        if (text.hideInLineEnd) {
+          buffer.remove(buffer.size - 1)
+        }
+      case _: LineFrag.Pad =>
     }
     buffer.toSeq
   }
@@ -140,7 +161,8 @@ class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag
       item match {
         case text: LineFrag.Text =>
           if (i < items.size - 1 || !text.hideInLineEnd) {
-            canvas.draw(text.text, text.style, left + text.pad, top + measure.y)
+            val tt = if (text.text.isEmpty && text.emptyAsQuestionMark) "?" else text.text
+            canvas.draw(tt, text.style, left + text.pad, top + measure.y)
           }
           left += text.measure.width
         case pad: LineFrag.Pad =>
@@ -165,19 +187,44 @@ class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag
     i = 0
     while (i < items.size) {
       val frag = items(i)
-      width += frag.measure.width
+      val ww = if (i == items.size - 1) {
+        frag match {
+          case text: LineFrag.Text =>
+            if (text.hideInLineEnd) {
+              0
+            } else {
+              frag.measure.width
+            }
+          case pad: LineFrag.Pad =>
+            warn("Line end pad?")
+            0
+        }
+      } else {
+        frag.measure.width
+      }
+      width += ww
       i += 1
     }
     TextMeasure(width, my, y)
   }
 }
 
-class TextPos(val text: LineFrag.Text, val pos: Int)
-class IndexInfo(val rect: Rect, val pos: Seq[TextPos])
+sealed trait PosInfo {
+  @nullable def lefty: (LineFrag.Text, Int) = this match {
+    case PosInfo.MiddleOf(left, right) => if (left != null) (left, left.text.size) else null
+    case PosInfo.Inside(text, pos) => (text, pos)
+  }
+}
+object PosInfo {
+  case class MiddleOf(@nullable var left: LineFrag.Text, @nullable var right: LineFrag.Text) extends PosInfo
+  case class Inside(text: LineFrag.Text, pos: Int) extends PosInfo
+}
+case class IndexInfo(rect: Rect, pos: PosInfo)
 
 // why we use this instead of token+pos? because this is normalized
 case class Index(index: Int, start: Boolean) {
-  def inc = Index(index + 1, start)
+  def + (a: Int) = Index(index + a, start)
+  def - (a: Int) = Index(index - a, start)
 }
 
 
@@ -235,8 +282,22 @@ class Page() {
         top += ll.measure.height
       } else {
         val (mm, ii) = ll.get(pos)
-        val rect = Rect(ll.pad + mm.width, top + ll.measure.y - mm.y, 3, mm.height)
-        ret = new IndexInfo(rect, ii)
+        var width = 0F
+        ii match {
+          case PosInfo.MiddleOf(t, _) =>
+            t match {
+              case a: LineFrag.Text =>
+                if (a.text.isEmpty && a.emptyAsQuestionMark) {
+                  width = a.measure.width
+                }
+              case _ =>
+            }
+          case _ =>
+        }
+        val rect = Rect(
+          ll.pad + mm.width,
+          top + ll.measure.y - mm.y, width, mm.height)
+        ret = IndexInfo(rect, ii)
       }
     }
     ret

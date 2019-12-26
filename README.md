@@ -76,6 +76,7 @@ then we add ways to resolve insert point from mouse.
 * NEXT
    * handle all insertion points
       * what user types? separators, delimiters, keyword, choice, const
+   * combine delimiter and separator, but with more options
    * handle keyboard up, down, right, left
    * handle choice
    * handle reference

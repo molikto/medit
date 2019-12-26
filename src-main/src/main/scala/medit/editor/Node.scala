@@ -2,14 +2,11 @@ package medit.editor
 
 import medit.{draw, editor}
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
-import medit.structure.Template.{LeftPad, RightPad}
 import medit.structure.{Language, NameTypeTag, SeparatorOpts, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
 import ujson.Value
-
-import scala.collection.immutable.{AbstractSeq, LinearSeq}
 
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
@@ -31,6 +28,7 @@ sealed trait Node {
   var fragWidth: Float = -1
   var fragWidthDown: Float = -1
   var fragForceLinear: Boolean = false
+  var wrapperNode = false
 
   def layoutForceLinear() = dependentCast[LineFrag](layout(0, 0, true))
   // calculate frags
@@ -40,6 +38,15 @@ sealed trait Node {
     }
     if (frag == null) {
       frag = doLayout(width, widthDown, forceLinear)
+      if (frag.node == null) {
+        wrapperNode = false
+        frag.node = this
+      } else {
+        if (childs.size != 1) {
+          logicError()
+        }
+        wrapperNode = true
+      }
       fragWidth = width
       fragWidthDown = widthDown
       fragForceLinear = forceLinear
@@ -160,23 +167,7 @@ object Node {
           && leftFrag.width + cs.map(a => dependentCast[LineFrag](a).width).sum + sepFrag.width * cs.size + endFrag.width <= width) {
         new LineFrag.Compose(leftFrag +: cs.flatMap(a => Seq(layoutLinear(sep), dependentCast[LineFrag](a))).drop(1) :+ endFrag)
       } else {
-        val leftFrag1 = {
-          val removedPadding = left.removeRightPad()
-          if (removedPadding != left) {
-            layoutLinear(removedPadding)
-          } else {
-            leftFrag
-          }
-        }
-        val endFrag1 = {
-          val removedPadding = end.removeLeftPad()
-          if (removedPadding != end) {
-            layoutLinear(removedPadding)
-          } else {
-            endFrag
-          }
-        }
-        new BlockFrag.Tree(Node.DefaultIndent, leftFrag1, cs.zipWithIndex.map(pair => {
+        new BlockFrag.Tree(Node.DefaultIndent, leftFrag, cs.zipWithIndex.map(pair => {
           if (pair._2 == cs.size - 1) {
             pair._1
           } else {
@@ -199,7 +190,7 @@ object Node {
               }
             }
           }
-        }), endFrag1)
+        }), endFrag)
       }
     }
 
@@ -209,13 +200,15 @@ object Node {
           new LineFrag.Text(name, TextStyle.keyword)
         case Template.Separator(name, opts) =>
           val style = TextStyle.delimiters
-          val unit = style.unit.width / 4F
+          val unit = style.unit.width / 3F
           // we cannot use LineFrag.Pad here, as they create extra insertion point
-          new LineFrag.Text(name,
+          new LineFrag.Text(
+            name,
             TextStyle.delimiters,
             hideInLineEnd = opts.contains(SeparatorOpts.HideInLineEnd),
-            pad = unit)
-        case Template.Pad | Template.LeftPad | Template.RightPad  =>
+            pad = unit
+          )
+        case Template.Pad =>
           new LineFrag.Pad(TextStyle.delimiters.unit.width * 0.75F)
         case Template.Delimiter(str) =>
           new LineFrag.Text(str, TextStyle.delimiters)
@@ -295,11 +288,17 @@ object Node {
       }
     }
 
-    //    override def tryNewChild(): Int = {
-//      // TODO check collection type and size limit
-//      _childs.append(default(this, language, sort.item))
-//      _childs.size - 1
-//    }
+    @nullable def insertNewAt(index: Int): Node = {
+      if (_childs.size < sort.sizeLimit) {
+        invalidate()
+        val c = default(this, language, sort.item)
+        _childs.insert(index, c)
+        _childs.size - 1
+        c
+      } else {
+        null
+      }
+    }
 //
 //
 //    override def tryDelete(last: Int): Boolean = {
@@ -319,6 +318,8 @@ object Node {
   sealed trait EditableLeaf extends Node {
     override def childs: Seq[Node] = Seq.empty
 
+    def text: String = buffer
+
     protected var buffer = ""
 
     def appendEdit(c: Int, small: Int): Unit = {
@@ -334,7 +335,7 @@ object Node {
     def style: TextStyle
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      new LineFrag.Text(buffer, style, node = this)
+      new LineFrag.Text(buffer, style, emptyAsQuestionMark = true)
     }
   }
 

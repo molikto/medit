@@ -23,5 +23,15 @@ object utils {
     pw.close()
   }
 
-  def unique[T](a: Seq[T]): Boolean = a.toSet.size == a.size
+
+  implicit class RichSeq[T](val a: Seq[T]) extends AnyVal {
+    def unique: Boolean = a.toSet.size == a.size
+  }
+
+  implicit class RichString(val str: String) extends AnyVal {
+    def isBlank: Boolean = {
+      val a = str.nonEmpty && !str.exists(a => Character.isSpaceChar(a))
+      !a
+    }
+  }
 }
