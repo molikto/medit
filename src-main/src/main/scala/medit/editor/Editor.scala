@@ -60,48 +60,50 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
     }
   }
 
-  def onChar(codepoint: Codepoint, mods: Mods): Unit = mode match {
-    case Mode.Insert(a) =>
-      val texts = lines.get(a).pos
-      def insertChar(node: Node.EditableLeaf, pos: Int): Unit = {
-        node.appendEdit(codepoint, pos)
-        mode = Mode.Insert(a + 1)
-      }
-      texts match {
-        case PosInfo.MiddleOf(left, right) =>
-          var done = false
-          if (left != null) {
-            left.resolve() match {
-              case JustStringNode(node) =>
-                if (codepoint == ' ') {
-                  node match {
-                    case choice: Node.Choice =>
-                      choice.tryCommit()
-                      done = true
-                    case _ =>
+  def onChar(codepoint: Codepoint, mods: Mods): Unit = {
+    mode match {
+      case Mode.Insert(a) =>
+        val texts = lines.get(a).pos
+        def insertChar(node: Node.EditableLeaf, pos: Int): Unit = {
+          node.appendEdit(codepoint, pos)
+          mode = Mode.Insert(a + 1)
+        }
+        texts match {
+          case PosInfo.MiddleOf(left, right) =>
+            var done = false
+            if (left != null) {
+              left.resolve() match {
+                case JustStringNode(node) =>
+                  if (codepoint == ' ') {
+                    node match {
+                      case choice: Node.Choice =>
+                        choice.tryCommit()
+                        done = true
+                      case _ =>
+                    }
+                  } else {
+                    done = true
+                    insertChar(node, node.text.size)
                   }
-                } else {
+                case _ =>
+              }
+            }
+            if (!done && right != null) {
+              right.resolve() match {
+                case JustStringNode(node) =>
                   done = true
-                  insertChar(node, node.text.size)
-                }
-              case _ =>
+                  insertChar(node, 0)
+                case _ =>
+              }
             }
-          }
-          if (!done && right != null) {
-            right.resolve() match {
+          case PosInfo.Inside(text, pos) =>
+            text.resolve() match {
               case JustStringNode(node) =>
-                done = true
-                insertChar(node, 0)
+                insertChar(node, pos)
               case _ =>
             }
-          }
-        case PosInfo.Inside(text, pos) =>
-          text.resolve() match {
-            case JustStringNode(node) =>
-              insertChar(node, pos)
-            case _ =>
-          }
-      }
+        }
+    }
   }
 
   def onKey(key: Int, action: Int, mods: Mods): Unit = {

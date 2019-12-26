@@ -719,6 +719,62 @@
         }
       ],
       "template": [
+        {
+          "$type": "compose",
+          "content": [
+            {
+              "$type": "keyword",
+              "str": "language"
+            },
+            {
+              "$type": "tree",
+              "b1": {
+                "$type": "delimiter",
+                "str": "("
+              },
+              "content": [
+                {
+                  "$type": "field",
+                  "name": "types",
+                  "template": [
+                    {
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "delimiter",
+                        "str": "["
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ";",
+                        "opts": [
+                          {
+                            "$type": "hide_in_line_end"
+                          }
+                        ]
+                      },
+                      "b2": {
+                        "$type": "delimiter",
+                        "str": "]"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "$type": "field",
+                  "name": "root"
+                }
+              ],
+              "sep": {
+                "$type": "separator",
+                "str": ","
+              },
+              "b2": {
+                "$type": "delimiter",
+                "str": ")"
+              }
+            }
+          ]
+        }
       ]
     }
   ],
