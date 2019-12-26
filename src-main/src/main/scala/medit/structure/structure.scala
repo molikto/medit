@@ -240,9 +240,11 @@ object TypeTemplate {
           case TypeTag.Str =>
             fieldName match {
               case Some("str") =>
-                Str("const", false)
+                Str("const")
+              case Some("name") =>
+                Str("reference")
               case _ =>
-                Str("default", false)
+                throw StructureException.UnknownTextStyle()
             }
           case coll: TypeTag.Coll =>
             val res = ColTree(
@@ -269,8 +271,9 @@ object TypeTemplate {
   @upickle.implicits.key("col_tree")
   case class ColTree(b1: Template, sep: Template, b2: Template, child: Option[TypeTemplate] = None) extends Col
 
+  // FIXME allow white space option
   @upickle.implicits.key("str")
-  case class Str(style: String, allowWhiteSpace: Boolean = false) extends TypeTemplate {
+  case class Str(style: String) extends TypeTemplate {
     val styleResolved = TextStyle.resolve(style) match {
       case Some(value) => value
       case None => throw StructureException.UnknownTextStyle()
@@ -278,7 +281,7 @@ object TypeTemplate {
   }
 
   object Str {
-    val Choice = Str("choice", false)
+    val Choice = Str("choice")
   }
 
   @upickle.implicits.key("nominal")
@@ -298,7 +301,7 @@ object Template {
     if (fields.isEmpty) {
       Keyword(name)
     } else {
-      val namedFields = fields.size >= 2
+      val namedFields = fields.size >= 100
       Compose(Seq(
         Keyword(name),
         Tree(
