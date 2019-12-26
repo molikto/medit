@@ -94,6 +94,7 @@ object TextStyle {
     case "reference" => Some(reference)
     case "declare" => Some(declare)
     case "const" => Some(const)
+    case "choice" => Some(choice) // FIXME don't resolve this
     case _ => None
   }
 

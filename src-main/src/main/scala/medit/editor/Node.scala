@@ -2,7 +2,7 @@ package medit.editor
 
 import medit.{draw, editor}
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
-import medit.structure.{Language, NameTypeTag, SeparatorOpts, Template, Type, TypeTag}
+import medit.structure.{Language, NameTypeTag, SeparatorOpts, Template, Type, TypeTag, TypeTemplate}
 
 import scala.collection.mutable
 import medit.utils._
@@ -194,6 +194,16 @@ object Node {
       }
     }
 
+    def assignTypeTemplate(f: TypeTemplate, child: Node): Unit = {
+      f match {
+        case col: TypeTemplate.Col =>
+          dependentCast[Node.Collection](child).template = col
+        case s: TypeTemplate.Str =>
+          dependentCast[Node.Str](child).template = s
+        case TypeTemplate.Nominal =>
+      }
+    }
+
     def layout(left: Template, width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       left match {
         case Template.Keyword(name) =>
@@ -215,20 +225,14 @@ object Node {
         case Template.Compose(content) =>
           layoutCompose(content, width, widthDown, forceLinear)
         case f: Template.Field =>
-          childs(f.index).layout(width, widthDown, forceLinear)
-        case f: Template.StrField =>
-          val node = dependentCast[Node.Str](childs(f.index))
-          node.style = f.styleResolved
-          node.layout(width, widthDown, forceLinear)
+          val child = childs(f.index)
+          assignTypeTemplate(f.templateOrDefault, child)
+          child.layout(width, widthDown, forceLinear)
         case Template.Tree(b1, content, sep, b2) =>
           // when measuring childs, we assume that the size avaliable is using widthDown
           val wd = widthDown - Node.DefaultIndent
           val cons = content.map(a => layout(a, wd, wd, forceLinear))
           layoutTree(b1, cons, sep, b2, width, forceLinear)
-        case f: Template.ColFieldRef =>
-          val node = dependentCast[Node.Collection](childs(f.index))
-          node.style = f
-          node.layout(width, widthDown, forceLinear)
       }
     }
   }
@@ -264,21 +268,21 @@ object Node {
       override protected var _parent: Node,
       val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
 
-    var style: Template.ColFieldRef = null
-
-    def layoutFlat(sep: Template): LineFrag =
-      new LineFrag.Compose(childs.map(_.layoutForceLinear()).flatMap(a => Seq(layoutLinear(sep), a)).drop(1))
+    var template: TypeTemplate.Col= null
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      if (style == null) {
-        style = Template.ColTree(Template.Delimiter("["), "", Template.Delimiter(","), Template.Delimiter("]"))
-      }
-      style match {
-        case Template.ColField(_, sep) =>
-          layoutFlat(sep)
-        case Template.ColTree(b1, _, sep, b2) =>
+      template match {
+        case f@TypeTemplate.ColField(sep, _) =>
+          new LineFrag.Compose(childs.map( a=> {
+            assignTypeTemplate(f.childOrDefault, a)
+            a.layoutForceLinear()
+          }).flatMap(a => Seq(layoutLinear(sep), a)).drop(1))
+        case f@TypeTemplate.ColTree(b1, sep, b2, _) =>
           val wd = widthDown - Node.DefaultIndent
-          val cons = childs.map(_.layout(wd, wd, forceLinear))
+          val cons = childs.map(a => {
+            assignTypeTemplate(f.childOrDefault, a)
+            a.layout(wd, wd, forceLinear)
+          })
           if (cons.isEmpty) {
             // FIXME we assume that these are optional now
             new LineFrag.Compose(Seq.empty)
@@ -332,10 +336,10 @@ object Node {
       buffer = buffer.take(small - 1) + buffer.drop(small)
     }
 
-    def style: TextStyle
+    def template: TypeTemplate.Str
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
-      new LineFrag.Text(buffer, style, emptyAsQuestionMark = true)
+      new LineFrag.Text(buffer, template.styleResolved, emptyAsQuestionMark = true)
     }
   }
 
@@ -368,14 +372,14 @@ object Node {
       }
     }
 
-    override def style: TextStyle = TextStyle.choice
+    override def template: TypeTemplate.Str = TypeTemplate.Str.Choice
   }
 
   class Str(
       override protected var _parent: Node
   ) extends EditableLeaf {
     // this is modified when layout, not ideal but ok
-    var style = TextStyle.default
+    var template: TypeTemplate.Str = null
     override def save(): Value = ujson.Str(buffer)
 
     def init(str: String): Node = {

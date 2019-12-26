@@ -64,9 +64,14 @@
           ],
           "template": [
             {
-              "$type": "str_field",
+              "$type": "field",
               "name": "name",
-              "style": "reference"
+              "template": [
+                {
+                  "$type": "str",
+                  "style": "reference"
+                }
+              ]
             }
           ]
         }
@@ -95,9 +100,14 @@
           "$type": "compose",
           "content": [
             {
-              "$type": "str_field",
+              "$type": "field",
               "name": "name",
-              "style": "declare"
+              "template": [
+                {
+                  "$type": "str",
+                  "style": "declare"
+                }
+              ]
             },
             {
               "$type": "separator",
@@ -154,44 +164,58 @@
               "$type": "pad"
             },
             {
-              "$type": "str_field",
+              "$type": "field",
               "name": "name",
-              "style": "declare"
-            },
-            {
-              "$type": "col_tree",
-              "b1": {
-                "$type": "delimiter",
-                "str": "("
-              },
-              "name": "fields",
-              "sep":
+              "template": [
                 {
-                  "$type": "separator",
-                  "str": ","
+                  "$type": "str",
+                  "style": "declare"
                 }
-              ,
-              "b2": {
-                "$type": "delimiter",
-                "str": ")"
-              }
+              ]
             },
             {
-              "$type": "col_tree",
-              "b1": {
-                "$type": "separator",
-                "str": "{"
-              },
-              "b2": {
-                "$type": "separator",
-                "str": "}"
-              },
+              "$type": "field",
+              "name": "fields",
+              "template": [
+                {
+                  "$type": "col_tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "("
+                  },
+                  "sep":
+                  {
+                    "$type": "separator",
+                    "str": ","
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": ")"
+                  }
+                }
+              ]
+            },
+            {
+              "$type": "field",
               "name": "template",
-              "sep":
-              {
-                "$type": "separator",
-                "str": ";"
-              }
+              "template": [
+                {
+                  "$type": "col_tree",
+                  "b1": {
+                    "$type": "separator",
+                    "str": "{"
+                  },
+                  "b2": {
+                    "$type": "separator",
+                    "str": "}"
+                  },
+                  "sep":
+                  {
+                    "$type": "separator",
+                    "str": ";"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -235,25 +259,30 @@
               },
               "content": [
                 {
-                  "$type": "col_tree",
-                  "b1": {
-                    "$type": "delimiter",
-                    "str": "["
-                  },
+                  "$type": "field",
                   "name": "types",
-                  "sep": {
-                    "$type": "separator",
-                    "str": ";",
-                    "opts": [
-                      {
-                        "$type": "hide_in_line_end"
+                  "template": [
+                    {
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "delimiter",
+                        "str": "["
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ";",
+                        "opts": [
+                          {
+                            "$type": "hide_in_line_end"
+                          }
+                        ]
+                      },
+                      "b2": {
+                        "$type": "delimiter",
+                        "str": "]"
                       }
-                    ]
-                  },
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": "]"
-                  }
+                    }
+                  ]
                 },
                 {
                   "$type": "field",
@@ -319,43 +348,58 @@
                   "$type": "pad"
                 },
                 {
-                  "$type": "str_field",
+                  "$type": "field",
                   "name": "name",
-                  "style": "declare"
+                  "template": [
+                    {
+                      "$type": "str",
+                      "style": "declare"
+                    }
+                  ]
                 },
                 {
-                  "$type": "col_tree",
-                  "b1": {
-                    "$type": "delimiter",
-                    "str": "("
-                  },
+                  "$type": "field",
                   "name": "fields",
-                  "sep":
-                  {
-                    "$type": "separator",
-                    "str": ","
-                  }
-                ,
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": ")"
-                  }
+                  "template": [
+                    {
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "delimiter",
+                        "str": "("
+                      },
+                      "sep":
+                      {
+                        "$type": "separator",
+                        "str": ","
+                      }
+                    ,
+                      "b2": {
+                        "$type": "delimiter",
+                        "str": ")"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "$type": "col_tree",
-                  "b1": {
-                    "$type": "separator",
-                    "str": "{"
-                  },
-                  "b2": {
-                    "$type": "separator",
-                    "str": "}"
-                  },
+                  "$type": "field",
                   "name": "template",
-                  "sep": {
-                    "$type": "separator",
-                    "str": ","
-                  }
+                  "template": [
+                    {
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "separator",
+                        "str": "{"
+                      },
+                      "b2": {
+                        "$type": "separator",
+                        "str": "}"
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ","
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -393,30 +437,40 @@
                   "$type": "pad"
                 },
                 {
-                  "$type": "str_field",
+                  "$type": "field",
                   "name": "name",
-                  "style": "declare"
+                  "template": [
+                    {
+                      "$type": "str",
+                      "style": "declare"
+                    }
+                  ]
                 },
                 {
-                  "$type": "col_tree",
-                  "b1": {
-                    "$type": "separator",
-                    "str": "{"
-                  },
-                  "b2": {
-                    "$type": "separator",
-                    "str": "}"
-                  },
+                  "$type": "field",
                   "name": "cases",
-                  "sep": {
-                      "$type": "separator",
-                      "str": ";",
-                    "opts": [
-                      {
-                        "$type": "hide_in_line_end"
+                  "template": [
+                    {
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "separator",
+                        "str": "{"
+                      },
+                      "b2": {
+                        "$type": "separator",
+                        "str": "}"
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ";",
+                        "opts": [
+                          {
+                            "$type": "hide_in_line_end"
+                          }
+                        ]
                       }
-                    ]
-                  }
+                    }
+                  ]
                 }
               ]
             }
@@ -426,73 +480,11 @@
     },
     {
       "$type": "sum",
-      "name": "template",
+      "name": "type_template",
       "cases": [
-
         {
-          "name": "col_field",
+          "name": "str",
           "fields": [
-            {
-              "name": "name",
-              "tag": {
-                "$type": "str"
-              }
-            },
-            {
-              "name": "sep",
-              "tag": {
-                "$type": "ref",
-                "name": "template"
-              }
-            }
-          ],
-          "template": [
-            {
-              "$type": "compose",
-              "content" : [
-                {
-                  "$type": "keyword",
-                  "str": "col_field"
-                },
-                {
-                  "$type": "tree",
-                "b1": {
-                  "$type": "delimiter",
-                  "str": "("
-                },
-                  "content": [
-                    {
-                      "$type": "str_field",
-                      "name": "name",
-                      "style": "reference"
-                    },
-                    {
-                      "$type": "field",
-                      "name": "sep"
-                    }
-                  ],
-                  "sep": {
-                    "$type": "separator",
-                    "str": ","
-                  },
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": ")"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "name": "str_field",
-          "fields": [
-            {
-              "name": "name",
-              "tag": {
-                "$type": "str"
-              }
-            },
             {
               "name": "style",
               "tag": {
@@ -506,7 +498,7 @@
               "content" : [
                 {
                   "$type": "keyword",
-                  "str": "str_field"
+                  "str": "str"
                 },
                 {
                   "$type": "tree",
@@ -516,14 +508,14 @@
                   },
                   "content": [
                     {
-                      "$type": "str_field",
-                      "name": "name",
-                      "style": "reference"
-                    },
-                    {
-                      "$type": "str_field",
+                      "$type": "field",
                       "name": "style",
-                      "style": "const"
+                      "template": [
+                        {
+                          "$type": "str",
+                          "style": "const"
+                        }
+                      ]
                     }
                   ],
                   "sep": {
@@ -539,6 +531,75 @@
             }
           ]
         },
+        {
+          "name": "col_tree",
+          "fields": [
+            {
+              "name": "b1",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "sep",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "b2",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "child",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "type_template"
+                }
+              }
+            }
+          ],
+          "template": [
+          ]
+        },
+        {
+          "name": "col_field",
+          "fields": [
+            {
+              "name": "sep",
+              "tag": {
+                "$type": "ref",
+                "name": "template"
+              }
+            },
+            {
+              "name": "child",
+              "tag": {
+                "$type": "opt",
+                "item": {
+                  "$type": "ref",
+                  "name": "type_template"
+                }
+              }
+            }
+          ],
+          "template": [
+          ]
+        }
+      ]
+    },
+    {
+      "$type": "sum",
+      "name": "template",
+      "cases": [
+
         {
           "name": "field",
           "fields": [
@@ -565,9 +626,14 @@
                   },
                   "content": [
                     {
-                      "$type": "str_field",
+                      "$type": "field",
                       "name": "name",
-                      "style": "reference"
+                      "template": [
+                        {
+                          "$type": "str",
+                          "style": "reference"
+                        }
+                      ]
                     }
                   ],
                   "sep": {
@@ -607,103 +673,31 @@
                   "str": "compose"
                 },
                 {
-                  "$type": "col_tree",
-                  "b1": {
-                    "$type": "delimiter",
-                    "str": "("
-                  },
+                  "$type": "field",
                   "name": "content",
-                  "sep": {
-                    "$type": "separator",
-                    "str": ","
-                  },
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": ")"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "name": "col_tree",
-          "fields": [
-            {
-              "name": "b1",
-              "tag": {
-                "$type": "ref",
-                "name": "template"
-              }
-            },
-            {
-              "name": "name",
-              "tag": {
-                "$type": "str"
-              }
-            },
-            {
-              "name": "sep",
-              "tag": {
-                "$type": "ref",
-                "name": "template"
-              }
-            },
-            {
-              "name": "b2",
-              "tag": {
-                "$type": "ref",
-                "name": "template"
-              }
-            }
-          ],
-          "template": [
-
-            {
-              "$type": "compose",
-              "content" : [
-                {
-                  "$type": "keyword",
-                  "str": "col_tree"
-                },
-                {
-                  "$type": "tree",
-                  "b1": {
-                    "$type": "delimiter",
-                    "str": "("
-                  },
-                  "content": [
+                  "template": [
                     {
-                      "$type": "field",
-                      "name": "b1"
-                    },
-                    {
-                      "$type": "str_field",
-                      "name": "name",
-                      "style": "reference"
-                    },
-                    {
-                      "$type": "field",
-                      "name": "sep"
-                    },
-                    {
-                      "$type": "field",
-                      "name": "b2"
+                      "$type": "col_tree",
+                      "b1": {
+                        "$type": "delimiter",
+                        "str": "("
+                      },
+                      "sep": {
+                        "$type": "separator",
+                        "str": ","
+                      },
+                      "b2": {
+                        "$type": "delimiter",
+                        "str": ")"
+                      }
                     }
-                  ],
-                  "sep": {
-                    "$type": "separator",
-                    "str": ","
-                  },
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": ")"
-                  }
+                  ]
                 }
               ]
             }
           ]
         },
+
         {
           "name": "tree",
           "fields": [
@@ -740,60 +734,6 @@
             }
           ],
           "template": [
-            {
-              "$type": "compose",
-              "content" : [
-                {
-                  "$type": "keyword",
-                  "str": "tree"
-                },
-                {
-                  "$type": "tree",
-                  "b1": {
-                    "$type": "delimiter",
-                    "str": "("
-                  },
-                  "content": [
-                    {
-                      "$type": "field",
-                      "name": "b1"
-                    },
-                    {
-                      "$type": "col_tree",
-                      "name": "content",
-                      "b1": {
-                        "$type": "delimiter",
-                        "str": "["
-                      },
-                      "b2": {
-                        "$type": "delimiter",
-                        "str": "]"
-                      },
-                      "sep": {
-                        "$type": "separator",
-                        "str": ","
-                      }
-                    },
-                    {
-                      "$type": "field",
-                      "name": "sep"
-                    },
-                    {
-                      "$type": "field",
-                      "name": "b2"
-                    }
-                  ],
-                  "sep": {
-                    "$type": "separator",
-                    "str": ","
-                  },
-                  "b2": {
-                    "$type": "delimiter",
-                    "str": ")"
-                  }
-                }
-              ]
-            }
           ]
         },
         {
@@ -822,9 +762,14 @@
                   "str": "d"
                 },
                 {
-                  "$type": "str_field",
+                  "$type": "field",
                   "name": "str",
-                  "style": "const"
+                  "template": [
+                    {
+                      "$type": "str",
+                      "style": "const"
+                    }
+                  ]
                 }
               ]
             }
@@ -849,9 +794,14 @@
                   "str": "k"
                 },
                 {
-                  "$type": "str_field",
+                  "$type": "field",
                   "name": "str",
-                  "style": "const"
+                  "template": [
+                    {
+                      "$type": "str",
+                      "style": "const"
+                    }
+                  ]
                 }
               ]
             }
@@ -878,29 +828,6 @@
             }
           ],
           "template": [
-            {
-              "$type": "compose",
-              "content" : [
-                {
-                  "$type": "keyword",
-                  "str": "s"
-                },
-                {
-                  "$type": "col_field",
-                  "name": "opts",
-                  "sep": {
-                    "$type": "separator",
-                    "str": "+"
-                  }
-                },
-                {
-                  "$type": "str_field",
-                  "name": "str",
-                  "style": "const"
-                }
-              ]
-            }
-
           ]
         }
       ]

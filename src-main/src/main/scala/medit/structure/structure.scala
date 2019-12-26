@@ -32,6 +32,8 @@ object StructureException {
 
   case class UnknownReference() extends StructureException
 
+  case class TypeTemplateWrongType() extends StructureException
+
 }
 
 
@@ -167,21 +169,13 @@ sealed trait Template {
           }
         case _: Template.Pads =>
           if (!complex) throw StructureException.OnlySimple()
-        case f: Template.FieldRef =>
+        case f: Template.Field =>
           if (!complex) throw StructureException.OnlySimple()
           f.index = fields.indexWhere(_.name == f.name)
           if (f.index == -1) throw StructureException.UnknownField()
           if (!remaining.remove(f.name)) throw StructureException.DuplicateFieldInTemplate()
-          f match {
-            case StrField(_, _) =>
-            case Field(_) =>
-            case ColField(_, sep) =>
-              rec(sep, complex = false)
-            case ColTree(b1, _, sep, b2) =>
-              rec(b1, complex = false)
-              rec(sep, complex = false)
-              rec(b2, complex = false)
-          }
+          val fld = fields(f.index)
+          f.templateOrDefault = TypeTemplate.default(f.template, fld.tag, Some(fld.name))
         case Template.Compose(content) =>
           if (!complex) throw StructureException.OnlySimple()
           content.foreach(a => rec(a))
@@ -223,6 +217,81 @@ object SeparatorOpts {
   )
 }
 
+sealed trait TypeTemplate
+
+object TypeTemplate {
+  def default(opt: Option[TypeTemplate], tag: TypeTag, fieldName: Option[String] = None): TypeTemplate = {
+    opt match {
+      case Some(value) =>
+        value match {
+          case col: Col =>
+            tag match {
+              case coll: TypeTag.Coll =>
+                col.childOrDefault = default(col.child, coll.item)
+                col
+              case _ =>
+                throw StructureException.TypeTemplateWrongType()
+            }
+          case _ =>
+            value
+        }
+      case None =>
+        tag match {
+          case TypeTag.Str =>
+            fieldName match {
+              case Some("str") =>
+                Str("const", false)
+              case _ =>
+                Str("default", false)
+            }
+          case coll: TypeTag.Coll =>
+            val res = ColTree(
+              Template.Delimiter("["),
+              Template.Separator(","),
+              Template.Delimiter("]")
+            )
+            res.childOrDefault = default(None, coll.item)
+            res
+          case TypeTag.Ref(name) =>
+            Nominal
+        }
+    }
+  }
+
+  sealed trait Col extends TypeTemplate {
+    val child: Option[TypeTemplate]
+    var childOrDefault: TypeTemplate = null
+  }
+
+  @upickle.implicits.key("col_field")
+  case class ColField(sep: Template, child: Option[TypeTemplate] = None) extends Col
+
+  @upickle.implicits.key("col_tree")
+  case class ColTree(b1: Template, sep: Template, b2: Template, child: Option[TypeTemplate] = None) extends Col
+
+  @upickle.implicits.key("str")
+  case class Str(style: String, allowWhiteSpace: Boolean = false) extends TypeTemplate {
+    val styleResolved = TextStyle.resolve(style) match {
+      case Some(value) => value
+      case None => throw StructureException.UnknownTextStyle()
+    }
+  }
+
+  object Str {
+    val Choice = Str("choice", false)
+  }
+
+  @upickle.implicits.key("nominal")
+  case object Nominal extends TypeTemplate
+
+  implicit val rw: RW[TypeTemplate] = RW.merge(
+    macroRW[ColField],
+    macroRW[ColTree],
+    macroRW[Str],
+    macroRW[Nominal.type]
+  )
+}
+
 object Template {
   /** MEDIT_EXTRA_START **/
   def nameDefault(name: String, fields: Seq[NameTypeTag]): Template = {
@@ -235,7 +304,7 @@ object Template {
         Tree(
           Delimiter("("),
           fields.map(f => {
-            val just = Template.Field(f.name)
+            val just = Template.Field(f.name, None)
             if (namedFields) {
               Compose(Seq(Template.Delimiter(f.name), Template.Separator("="), just))
             } else {
@@ -256,13 +325,6 @@ object Template {
   sealed trait Simple extends NonStructural {
   }
 
-  sealed trait FieldRef extends NonStructural {
-    val name: String
-    var index = -1
-  }
-
-  sealed trait ColFieldRef extends FieldRef
-
   /** MEDIT_EXTRA_END **/
 
   @upickle.implicits.key("keyword")
@@ -277,22 +339,12 @@ object Template {
   @upickle.implicits.key("pad")
   case object Pad extends Pads
 
-  @upickle.implicits.key("str_field")
-  case class StrField(name: String, style: String) extends FieldRef {
-    val styleResolved = TextStyle.resolve(style) match {
-      case Some(value) => value
-      case None => throw StructureException.UnknownTextStyle()
-    }
+  @upickle.implicits.key("field")
+  case class Field(name: String, template: Option[TypeTemplate] = None) extends NonStructural {
+    var index = -1
+    var templateOrDefault: TypeTemplate = null
   }
 
-  @upickle.implicits.key("field")
-  case class Field(name: String) extends FieldRef
-
-  @upickle.implicits.key("col_field")
-  case class ColField(name: String, sep: Template) extends ColFieldRef
-
-  @upickle.implicits.key("col_tree")
-  case class ColTree(b1: Template, name: String, sep: Template, b2: Template) extends ColFieldRef
 
   @upickle.implicits.key("tree")
   case class Tree(b1: Template, content: Seq[Template], sep: Template, b2: Template) extends Template
@@ -308,11 +360,8 @@ object Template {
     macroRW[Keyword],
     macroRW[Delimiter],
     macroRW[Tree],
-    macroRW[StrField],
     macroRW[Field],
     macroRW[Separator],
-    macroRW[ColTree],
-    macroRW[ColField],
     macroRW[Pad.type]
   )
 }
