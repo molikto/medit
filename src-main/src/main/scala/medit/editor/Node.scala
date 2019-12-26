@@ -3,7 +3,7 @@ package medit.editor
 import medit.{draw, editor}
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
 import medit.structure.Template.{LeftPad, RightPad}
-import medit.structure.{Language, NameTypeTag, Template, Type, TypeTag}
+import medit.structure.{Language, NameTypeTag, SeparatorOpts, Template, Type, TypeTag}
 
 import scala.collection.mutable
 import medit.utils._
@@ -182,9 +182,10 @@ object Node {
           } else {
             val parent = pair._1.parent
             def matches(frag: Frag, sep: Template): Boolean = (frag, sep) match {
-              case (txt: LineFrag.Text, Template.Separator(str)) =>
-                if (txt.text == str && txt.style == TextStyle.delimiters) true
-                else false
+              case (txt: LineFrag.Text, Template.Separator(str, opts)) =>
+                txt.text == str &&
+                    txt.hideInLineEnd == opts.contains(SeparatorOpts.HideInLineEnd) &&
+                    txt.style == TextStyle.delimiters
               case _ => false
             }
             if (parent != null && parent.frags.size == 2 && parent.frags(0) == pair._1 && matches(parent.frags(1), sep)) {
@@ -206,11 +207,14 @@ object Node {
       left match {
         case Template.Keyword(name) =>
           new LineFrag.Text(name, TextStyle.keyword)
-        case Template.Separator(name) =>
+        case Template.Separator(name, opts) =>
           val style = TextStyle.delimiters
           val unit = style.unit.width / 4F
           // we cannot use LineFrag.Pad here, as they create extra insertion point
-          new LineFrag.Text(name, TextStyle.delimiters, pad = unit)
+          new LineFrag.Text(name,
+            TextStyle.delimiters,
+            hideInLineEnd = opts.contains(SeparatorOpts.HideInLineEnd),
+            pad = unit)
         case Template.Pad | Template.LeftPad | Template.RightPad  =>
           new LineFrag.Pad(TextStyle.delimiters.unit.width * 0.75F)
         case Template.Delimiter(str) =>
@@ -223,18 +227,14 @@ object Node {
           val node = dependentCast[Node.Str](childs(f.index))
           node.style = f.styleResolved
           node.layout(width, widthDown, forceLinear)
-        case f@Template.ColField(_, sep) =>
-          val node = dependentCast[Node.Collection](childs(f.index))
-          node.style = Left(f)
-          node.layout(width, widthDown, forceLinear)
         case Template.Tree(b1, content, sep, b2) =>
           // when measuring childs, we assume that the size avaliable is using widthDown
           val wd = widthDown - Node.DefaultIndent
           val cons = content.map(a => layout(a, wd, wd, forceLinear))
           layoutTree(b1, cons, sep, b2, width, forceLinear)
-        case f@Template.ColTree(b1, _, sep, b2) =>
+        case f: Template.ColFieldRef =>
           val node = dependentCast[Node.Collection](childs(f.index))
-          node.style = Right(f)
+          node.style = f
           node.layout(width, widthDown, forceLinear)
       }
     }
@@ -271,26 +271,26 @@ object Node {
       override protected var _parent: Node,
       val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
 
-    var style: Either[Template.ColField, Template.ColTree] = null
+    var style: Template.ColFieldRef = null
 
     def layoutFlat(sep: Template): LineFrag =
-      new LineFrag.Compose(childs.map(_.layoutForceLinear()).flatMap(a => Seq(a, layoutLinear(sep))))
+      new LineFrag.Compose(childs.map(_.layoutForceLinear()).flatMap(a => Seq(layoutLinear(sep), a)).drop(1))
 
     override protected def doLayout(width: Float, widthDown: Float, forceLinear: Boolean): Frag = {
       if (style == null) {
-        style = Right(Template.ColTree(Template.Delimiter("["), "", Template.Delimiter(","), Template.Delimiter("]")))
+        style = Template.ColTree(Template.Delimiter("["), "", Template.Delimiter(","), Template.Delimiter("]"))
       }
       style match {
-        case Left(value) =>
-          layoutFlat(value.sep)
-        case Right(value) =>
+        case Template.ColField(_, sep) =>
+          layoutFlat(sep)
+        case Template.ColTree(b1, _, sep, b2) =>
           val wd = widthDown - Node.DefaultIndent
           val cons = childs.map(_.layout(wd, wd, forceLinear))
           if (cons.isEmpty) {
             // FIXME we assume that these are optional now
             new LineFrag.Compose(Seq.empty)
           } else {
-            layoutTree(value.b1, cons, value.sep, value.b2, width, forceLinear)
+            layoutTree(b1, cons, sep, b2, width, forceLinear)
           }
       }
     }

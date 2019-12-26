@@ -1,0 +1,8 @@
+{
+  "$type": "col_field",
+  "name": "content",
+  "sep": {
+    "$type": "delimiter",
+    "str": "~"
+  }
+}

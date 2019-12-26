@@ -168,11 +168,11 @@ sealed trait Template {
             case Template.Delimiter(str) =>
               if (str.isEmpty) throw StructureException.BlankConstants()
               language.delimiters.add(str)
-            case Template.Separator(str) =>
+            case Template.Separator(str, _) =>
               if (str.isEmpty) throw StructureException.BlankConstants()
               language.separators.add(str)
-            case Template.Pad | Template.LeftPad | Template.RightPad =>
           }
+        case _: Template.Pads =>
         case f: Template.FieldRef =>
           if (!complex) throw StructureException.OnlySimple()
           f.index = fields.indexWhere(_.name == f.name)
@@ -204,8 +204,28 @@ sealed trait Template {
       throw StructureException.MissingFieldInTemplate()
     }
   }
+  
+  lazy val tokens: Seq[Template.NonStructural] = this match {
+    case structural: NonStructural =>
+      Seq(structural)
+    case _: Pads =>
+      Seq.empty
+    case Tree(b1, content, sep, b2) =>
+      b1.tokens ++ content.flatMap(a => Seq(sep, a)).drop(1).flatMap(_.tokens) ++ b2.tokens
+    case Compose(content) =>
+      content.flatMap(_.tokens)
+  }
 
   /** MEDIT_EXTRA_END **/
+}
+
+sealed trait SeparatorOpts
+object SeparatorOpts {
+  @upickle.implicits.key("hide_in_line_end")
+  case object HideInLineEnd extends SeparatorOpts
+  implicit val rw: RW[SeparatorOpts] = RW.merge(
+    macroRW[HideInLineEnd.type]
+  )
 }
 
 object Template {
@@ -233,14 +253,20 @@ object Template {
       ))
     }
   }
+  
+  sealed trait NonStructural extends Template
+  
+  sealed trait Pads extends Template
 
-  sealed trait Simple extends Template {
+  sealed trait Simple extends NonStructural {
   }
 
-  sealed trait FieldRef extends Template {
+  sealed trait FieldRef extends NonStructural {
     val name: String
     var index = -1
   }
+
+  sealed trait ColFieldRef extends FieldRef
 
   /** MEDIT_EXTRA_END **/
 
@@ -251,16 +277,16 @@ object Template {
   case class Delimiter(str: String) extends Simple
 
   @upickle.implicits.key("separator")
-  case class Separator(str: String) extends Simple
+  case class Separator(str: String, opts: Set[SeparatorOpts] = Set.empty) extends Simple
 
   @upickle.implicits.key("pad")
-  case object Pad extends Simple
+  case object Pad extends Pads
 
   @upickle.implicits.key("left_pad")
-  case object LeftPad extends Simple
+  case object LeftPad extends Pads
 
   @upickle.implicits.key("right_pad")
-  case object RightPad extends Simple
+  case object RightPad extends Pads
 
 
   @upickle.implicits.key("str_field")
@@ -275,10 +301,10 @@ object Template {
   case class Field(name: String) extends FieldRef
 
   @upickle.implicits.key("col_field")
-  case class ColField(name: String, sep: Template) extends FieldRef
+  case class ColField(name: String, sep: Template) extends ColFieldRef
 
   @upickle.implicits.key("col_tree")
-  case class ColTree(b1: Template, name: String, sep: Template, b2: Template) extends FieldRef
+  case class ColTree(b1: Template, name: String, sep: Template, b2: Template) extends ColFieldRef
 
   @upickle.implicits.key("tree")
   case class Tree(b1: Template, content: Seq[Template], sep: Template, b2: Template) extends Template

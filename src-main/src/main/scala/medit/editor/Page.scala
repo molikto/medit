@@ -135,10 +135,13 @@ class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag
       canvas.draw(Rect(0, top, 10, measure.height), ShapeStyle.debug)
     }
     var left = pad
-    for (item <- items) {
+    for (i <- 0 until items.size) {
+      val item = items(i)
       item match {
         case text: LineFrag.Text =>
-          canvas.draw(text.text, text.style, left + text.pad, top + measure.y)
+          if (i < items.size - 1 || !text.hideInLineEnd) {
+            canvas.draw(text.text, text.style, left + text.pad, top + measure.y)
+          }
           left += text.measure.width
         case pad: LineFrag.Pad =>
           left += pad.width
@@ -172,6 +175,7 @@ class Line(var num: Int, var pad: Float, var top: Float, val items: Seq[LineFrag
 class TextPos(val text: LineFrag.Text, val pos: Int)
 class IndexInfo(val rect: Rect, val pos: Seq[TextPos])
 
+// why we use this instead of token+pos? because this is normalized
 case class Index(index: Int, start: Boolean) {
   def inc = Index(index + 1, start)
 }

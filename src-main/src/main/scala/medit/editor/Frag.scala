@@ -1,6 +1,7 @@
 package medit.editor
 
 import medit.draw.{TextMeasure, TextStyle}
+import medit.structure.SeparatorOpts
 import medit.utils._
 
 
@@ -56,6 +57,7 @@ object LineFrag {
       val text: String,
       val style: TextStyle,
       @nullable val node: Node.EditableLeaf = null,
+      val hideInLineEnd: Boolean = false,
       val pad: Float = 0) extends Atomic {
     def editable: Boolean = node != null
 

@@ -239,6 +239,57 @@
         }
       ],
       "template": [
+        {
+          "$type": "compose",
+          "content": [
+            {
+              "$type": "keyword",
+              "str": "language"
+            },
+            {
+              "$type": "tree",
+              "b1": {
+                "$type": "delimiter",
+                "str": "("
+              },
+              "content": [
+                {
+                  "$type": "col_tree",
+                  "b1": {
+                    "$type": "delimiter",
+                    "str": "["
+                  },
+                  "name": "types",
+                  "sep": {
+                    "$type": "separator",
+                    "str": ";",
+                    "opts": [
+                      {
+                        "$type": "hide_in_line_end"
+                      }
+                    ]
+                  },
+                  "b2": {
+                    "$type": "delimiter",
+                    "str": "]"
+                  }
+                },
+                {
+                  "$type": "field",
+                  "name": "root"
+                }
+              ],
+              "sep": {
+                "$type": "separator",
+                "str": ","
+              },
+              "b2": {
+                "$type": "delimiter",
+                "str": ")"
+              }
+            }
+          ]
+        }
       ]
     },
     {
@@ -339,10 +390,9 @@
                     ]
                   },
                   "name": "template",
-                  "sep":
-                  {
+                  "sep": {
                     "$type": "separator",
-                    "str": ";"
+                    "str": ","
                   }
                 }
               ]
@@ -417,8 +467,13 @@
                   "name": "cases",
                   "sep": {
                       "$type": "separator",
-                      "str": ";"
-                    }
+                      "str": ";",
+                    "opts": [
+                      {
+                        "$type": "hide_in_line_end"
+                      }
+                    ]
+                  }
                 }
               ]
             }
@@ -616,7 +671,7 @@
                   },
                   "name": "content",
                   "sep": {
-                    "$type": "delimiter",
+                    "$type": "separator",
                     "str": ","
                   },
                   "b2": {
@@ -881,6 +936,16 @@
               "tag": {
                 "$type": "str"
               }
+            },
+            {
+              "name": "opts",
+              "tag": {
+                "$type": "bag",
+                "item": {
+                  "$type": "ref",
+                  "name": "separator_opts"
+                }
+              }
             }
           ],
           "template": [
@@ -892,6 +957,14 @@
                   "str": "s"
                 },
                 {
+                  "$type": "col_field",
+                  "name": "opts",
+                  "sep": {
+                    "$type": "separator",
+                    "str": "+"
+                  }
+                },
+                {
                   "$type": "str_field",
                   "name": "str",
                   "style": "const"
@@ -900,6 +973,17 @@
             }
 
           ]
+        }
+      ]
+    },
+    {
+      "$type": "sum",
+      "name": "separator_opts",
+      "cases": [
+        {
+          "name": "hide_in_line_end",
+          "fields": [],
+          "template": []
         }
       ]
     }
