@@ -352,10 +352,11 @@ object Node {
 
     override def save(): Value = ujson.Obj.from(Seq(("$choice", buffer)))
 
-    def tryCommit(buffer: String): Boolean = {
+    def tryCommit(): Boolean = {
       typ.cases.indexWhere(_.name == buffer) match {
         case -1 => false
         case i =>
+          invalidate()
           val s = new Structure(null, language, tag, i)
           s.init(typ.cases(i).fields.map(a => default(s, language, a.tag)))
           parent match {

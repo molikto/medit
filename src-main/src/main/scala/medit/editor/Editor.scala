@@ -73,8 +73,17 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
           if (left != null) {
             left.resolve() match {
               case JustStringNode(node) =>
-                done = true
-                insertChar(node, node.text.size)
+                if (codepoint == ' ') {
+                  node match {
+                    case choice: Node.Choice =>
+                      choice.tryCommit()
+                      done = true
+                    case _ =>
+                  }
+                } else {
+                  done = true
+                  insertChar(node, node.text.size)
+                }
               case _ =>
             }
           }
@@ -83,6 +92,7 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
               case JustStringNode(node) =>
                 done = true
                 insertChar(node, 0)
+              case _ =>
             }
           }
         case PosInfo.Inside(text, pos) =>
