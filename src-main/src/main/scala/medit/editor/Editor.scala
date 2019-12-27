@@ -30,6 +30,8 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
       case Mode.Insert(index) =>
         val rect = lines.get(index).rect
         canvas.draw(Rect(rect.left, rect.top, rect.width + 3, rect.height), ShapeStyle.cursor)
+      case Mode.DeleteConfirm(node, prev) =>
+        // FIXME draw this
     }
     canvas.restore()
     val timeDraw = System.currentTimeMillis()
@@ -120,7 +122,10 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
                   case JustStringNode(node) =>
                     node.backspaceEdit(lefty._2)
                     mode = Mode.Insert(a - 1)
-                  case _ =>
+                  case a =>
+                    if (a.lastOfNode) {
+                      mode = Mode.DeleteConfirm(a.node.path, mode)
+                    }
                 }
               }
             case Key.Enter =>
@@ -146,6 +151,15 @@ class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) e
                     }
                   }
                 case _ =>
+              }
+            case _ =>
+          }
+        case Mode.DeleteConfirm(node, Mode.Insert(index)) =>
+          key match {
+            case Key.Backspace =>
+              val n = root(node)
+              if (n.remove()) {
+                mode = Mode.Insert(index - n.frag.size)
               }
             case _ =>
           }

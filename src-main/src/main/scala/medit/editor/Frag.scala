@@ -22,6 +22,7 @@ sealed trait Frag {
 
   def frags: Seq[Frag]
   def count: Int
+  def size: Int
 
   // set by parents
   var parent: Frag = null
@@ -49,6 +50,8 @@ sealed trait Frag {
 sealed trait NonAtomicFrag extends Frag {
   lazy val count: Int = frags.map(_.count).sum
 
+  lazy val size: Int = frags.map(_.size).sum
+
   def setParents() = frags.foreach(_.parent = this)
 
   def finishInner(canvas: Page): Unit
@@ -57,6 +60,7 @@ sealed trait NonAtomicFrag extends Frag {
     // FIXME we remember pos before but it is not that sound, instead we should do a second pass of lines
     finishInner(canvas)
   }
+
 }
 
 sealed trait LineFrag extends Frag {
@@ -67,7 +71,6 @@ object LineFrag {
   sealed trait Atomic extends LineFrag {
     def frags: Seq[Frag] = Seq.empty
 
-    def size: Int
     def measure: TextMeasure
 
     override def finish(canvas: Page): Unit = canvas.append(this)
@@ -147,6 +150,7 @@ object LineFrag {
     override def width: Float = frags.map(_.width).sum
 
     override def finishInner(canvas: Page): Unit = frags.foreach(_.finish(canvas))
+
   }
 }
 
@@ -178,6 +182,7 @@ object BlockFrag {
     }
 
     override def finishInner(canvas: Page): Unit = frags.foreach(_.finish(canvas))
+
   }
 
   class Tree(val pad: Float, val start: LineFrag, val center: Seq[Frag], val end: LineFrag) extends BlockFrag with NonAtomicFrag {

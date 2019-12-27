@@ -11,6 +11,7 @@ import ujson.Value
 // node is the mutable structure, also they have caches for most ui stuff, and they are recalculated at times
 sealed trait Node {
 
+
   def save(): ujson.Value
 
   @nullable protected var _parent: Node
@@ -18,10 +19,28 @@ sealed trait Node {
   def apply(focus: Seq[Int]): Node = if (focus.isEmpty) this else logicError()
   def childs: Seq[Node]
 
+  def path: Seq[Int] = {
+    if (parent == null) {
+      Seq.empty
+    } else {
+      parent.path :+ parent.childs.indexOf(this)
+    }
+  }
+
   def invalidate(): Unit = {
     frag = null
     if (_parent != null) _parent.invalidate()
   }
+
+  def remove(): Boolean = {
+    if (parent != null) {
+      parent.removeChild(parent.childs.indexOf(this))
+    } else {
+      false
+    }
+  }
+
+  def removeChild(i: Int): Boolean = false
 
   // cache invalidation: remember to invalidate parent frag when node content changed
   var frag: Frag = null
@@ -292,12 +311,20 @@ object Node {
       }
     }
 
+
+    override def removeChild(i: Int): Boolean = {
+      _childs.remove(i)
+      invalidate()
+      true
+    }
+
+
     @nullable def insertNewAt(index: Int): Node = {
       if (_childs.size < sort.sizeLimit) {
-        invalidate()
         val c = default(this, language, sort.item)
         _childs.insert(index, c)
         _childs.size - 1
+        invalidate()
         c
       } else {
         null
@@ -327,13 +354,13 @@ object Node {
     protected var buffer = ""
 
     def appendEdit(c: Int, small: Int): Unit = {
-      invalidate()
       buffer = buffer.take(small) + c.toChar.toString + buffer.drop(small)
+      invalidate()
     }
 
     def backspaceEdit(small: Int): Unit = {
-      invalidate()
       buffer = buffer.take(small - 1) + buffer.drop(small)
+      invalidate()
     }
 
     def template: TypeTemplate.Str
@@ -360,7 +387,6 @@ object Node {
       typ.cases.indexWhere(_.name == buffer) match {
         case -1 => false
         case i =>
-          invalidate()
           val s = new Structure(null, language, tag, i)
           s.init(typ.cases(i).fields.map(a => default(s, language, a.tag)))
           parent match {
@@ -368,6 +394,7 @@ object Node {
               h.replace(this, s)
             case _ => logicError()
           }
+          invalidate()
           true
       }
     }
