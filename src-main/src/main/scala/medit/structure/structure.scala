@@ -43,7 +43,6 @@ sealed trait TypeTag {
     case _: TypeTag.Primitive =>
     case TypeTag.Opt(tt) => tt.check(types)
     case TypeTag.Arr(tt) => tt.check(types)
-    case TypeTag.Bag(tt) => tt.check(types)
     case n@TypeTag.Ref(name) =>
       n.index = types.indexWhere(_.name == name)
       if (n.index == -1) throw StructureException.UnknownReference()
@@ -62,7 +61,6 @@ object TypeTag {
     def sizeLimit: Int = this match {
       case Opt(item) => 1
       case Arr(item) => Int.MaxValue
-      case Bag(item) => Int.MaxValue
     }
   }
 
