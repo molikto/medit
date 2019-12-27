@@ -70,17 +70,16 @@ object TypeTag {
 
   /** MEDIT_EXTRA_END **/
   @upickle.implicits.key("str")
-  case object Str extends Primitive {
-  }
+  case object Str extends Primitive
+
+  @upickle.implicits.key("unit")
+  case object Unit extends Primitive
 
   @upickle.implicits.key("opt")
   case class Opt(item: TypeTag) extends Coll
 
   @upickle.implicits.key("arr")
   case class Arr(item: TypeTag) extends Coll
-
-  @upickle.implicits.key("bag")
-  case class Bag(item: TypeTag) extends Coll
 
   @upickle.implicits.key("ref")
   case class Ref(name: String) extends TypeTag {
@@ -89,7 +88,7 @@ object TypeTag {
     /** MEDIT_EXTRA_END **/
   }
 
-  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str.type], macroRW[Opt], macroRW[Arr], macroRW[Bag], macroRW[Ref])
+  implicit val rw: RW[TypeTag] = RW.merge(macroRW[Str.type], macroRW[Opt], macroRW[Arr], macroRW[Ref])
 }
 
 case class NameTypeTag(name: String, tag: TypeTag)

@@ -39,20 +39,6 @@
           ]
         },
         {
-          "name": "bag",
-          "fields": [
-            {
-              "name": "item",
-              "tag": {
-                "$type": "ref",
-                "name": "type_tag"
-              }
-            }
-          ],
-          "template": [
-          ]
-        },
-        {
           "name": "ref",
           "fields": [
             {
@@ -672,7 +658,7 @@
             {
               "name": "opts",
               "tag": {
-                "$type": "bag",
+                "$type": "arr",
                 "item": {
                   "$type": "ref",
                   "name": "separator_opts"
