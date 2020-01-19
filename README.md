@@ -81,19 +81,6 @@ then we add ways to resolve insert point from mouse.
    * handle choice
    * handle reference
 
-## other efforts
- 
-* IntelliJ MPS
-    * this is a structural editor framework, not a language framework, MPS's semantics part is not suited for developing serious general purpose languages from scratch, this project aims to provide an alternative to language implementors an alternative to parser and language server.
-    * for example they seems to treat `reference` as a construct
-* Blockly
-* Lamdu
-    * very good concepts
-    * but why the editor has so much animation? it is a distraction
-* Hazel
-    * this is too strict with semantics
-* TeXmacs
-
 
 
 ---------
