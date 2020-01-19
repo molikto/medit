@@ -3,15 +3,15 @@ package medit.editor
 import medit.draw._
 import medit.structure.Language
 import medit.input._
-import medit.utils.nullable
 
 class Editor(language: Language, data: ujson.Value, save: ujson.Value => Unit) extends Mover {
-
 
   // states
   protected val root = Node.create(null, language, language.root, data)
   private var lines: Page = null
   protected var mode: Mode = null
+
+
 
   def render(canvas: Canvas, width: Int, height: Int): Unit = {
     val timeStart = System.currentTimeMillis()

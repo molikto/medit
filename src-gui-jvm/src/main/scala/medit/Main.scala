@@ -52,6 +52,7 @@ class Paints() {
   val text : sk_paint_t = sk_paint_new()
   sk_paint_set_antialias(text, true)
   val shape: sk_paint_t = sk_paint_new()
+  sk_paint_set_style(shape, 0)
 }
 
 class Shapes {
@@ -112,7 +113,7 @@ class Window extends Canvas {
     glfwGetWindowSize(window, pWidth, pHeight)
     windowSize = (pWidth.get(0), pHeight.get(0))
     debug(s"window size $windowSize")
-    val vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor)
+    val vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor())
     glfwSetWindowPos(window, (vidmode.width - pWidth.get(0)) / 2, (vidmode.height - pHeight.get(0)) / 2)
     glfwGetFramebufferSize(window, pWidth, pHeight)
     frameBufferSize = (pWidth.get(0), pHeight.get(0))
@@ -226,8 +227,8 @@ class Window extends Canvas {
 
   override def draw(text: String, style: TextStyle, left: Float, top: Float): Unit = {
     if (style.bgColor != 0) {
-      val paint = paints.shape
-      sk_paint_set_color(paint, style.bgColor)
+      val shapePaint = paints.shape
+      sk_paint_set_color(shapePaint, style.bgColor)
       // FIXME reuse ones measured before?
       val measure = style.measure(text)
       val r = shapes.rect
@@ -235,7 +236,7 @@ class Window extends Canvas {
       r.bottom((top + measure.my) * dp)
       r.left(left * dp)
       r.right((left + measure.width) * dp)
-      sk_canvas_draw_rect(canvas, r, paint)
+      sk_canvas_draw_rect(canvas, r, shapePaint)
     }
     val paint = paints.text
     sk_paint_set_color(paint, style.color)
@@ -247,7 +248,6 @@ class Window extends Canvas {
 
   override def draw(rect: Rect, style: ShapeStyle): Unit = {
     val paint = paints.shape
-    sk_paint_set_stroke_width(paint, 1 * dp)
     sk_paint_set_color(paint, style.color)
     val r = shapes.rect
     r.left(rect.left * dp)
