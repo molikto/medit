@@ -35,11 +35,11 @@ object typefaces {
   def apply(a: draw.Typeface): sk_typeface_t = a match {
     case Typeface.Mono => Mono
   }
-  val Mono = font("Menlo.ttc", 0)
+  val Mono = font("JetBrainsMono-Regular.ttf", 0)
 }
 
 
-class Impl extends draw.Impl {
+class DrawPlatform extends draw.Platform {
   override def measure(textStyle: TextStyle, str: String): TextMeasure = {
     TextMeasure(textStyle.size * str.size * 0.6F, textStyle.size * 0.35F, textStyle.size * 1.05F)
   }
@@ -60,7 +60,7 @@ class Shapes {
 }
 object Window {
   lazy val glinterface = gr_glinterface_create_native_interface()
-  draw.impl = new Impl()
+  draw.platform = new DrawPlatform()
   var paints: Paints = null
   var shapes: Shapes = null
   def init(): Unit = {

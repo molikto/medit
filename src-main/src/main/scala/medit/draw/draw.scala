@@ -3,9 +3,10 @@ package medit.draw
 import medit.utils._
 
 
-trait Impl {
+trait Platform {
   def measure(textStyle: TextStyle, str: String): TextMeasure
 }
+
 trait Canvas {
   def draw(text: String, style: TextStyle, left: Float, top: Float): Unit
   def draw(rect: Rect, style: ShapeStyle): Unit
@@ -83,7 +84,7 @@ object Typeface {
 }
 
 case class TextStyle(color: Int, typeface: Typeface, size: Int, bgColor: Int = 0) {
-  def measure(text: String) = impl.measure(this, text)
+  def measure(text: String) = platform.measure(this, text)
   lazy val unit = measure(" ")
 }
 

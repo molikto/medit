@@ -8,9 +8,35 @@ The structural editor framework for mlang
 I'm doing a [devlog](https://molikto.github.io/posts/05-growing-a-structural-editor.html) to record how it evolves.
  
  
+ 
 ## build & run
 
 standard SBT project `sbt gui-jvm/compile`, `sbt gui-jvm/run`, you need `-XstartOnFirstThread` JVM option on macOS.
+
+
+## MVP for incremental-parsing refactor
+
+
+the goal is to experiment if this is a good way of doing it. it is not indended to create practical solutions for existing languages yet, after we know that this will play out, existing language & real usage is next step
+
+* keep using Skia, look into JS based stack
+* just start with add tree-sitter to java, then try to came up with a dsl for:
+    * translate to tree-sitter
+    * layout combinators
+    
+next step is to expand it into a language benchmark like 
+
+* retrofit existing text based languages
+    * retrofit for language servers
+    * retrofit for debug servers
+* abstract dependencies
+    * gui
+    * incremental parser
+
+    
+---- 
+
+*old stuff*
 
 ## architecture
  

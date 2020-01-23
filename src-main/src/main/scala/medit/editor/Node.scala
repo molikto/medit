@@ -2,7 +2,7 @@ package medit.editor
 
 import medit.{draw, editor}
 import medit.draw.{Canvas, Position, Rect, Size, TextMeasure, TextStyle}
-import medit.structure.{Language, NameTypeTag, SeparatorOpts, Template, Type, TypeTag, TypeTemplate}
+import medit.structure._
 
 import scala.collection.mutable
 import medit.utils._

@@ -15,14 +15,6 @@ object utils {
   def logicError() = throw new IllegalStateException()
   @inline def notUsed() = throw new IllegalStateException()
 
-  def read(fileName: String): String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
-
-  def save(a: ujson.Value, fileName: String): Unit = {
-    val pw = new PrintWriter(new File(fileName ))
-    pw.write(a.render(2))
-    pw.close()
-  }
-
 
   implicit class RichSeq[T](val a: Seq[T]) extends AnyVal {
     def unique: Boolean = a.toSet.size == a.size
@@ -34,4 +26,24 @@ object utils {
       !a
     }
   }
+
+
+  /**
+   * assuming you use ASCII names
+   */
+  object pickle extends upickle.AttributeTagged {
+  }
+
+
+
+
+  def read(fileName: String): String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
+
+  def save(a: ujson.Value, fileName: String): Unit = {
+    val pw = new PrintWriter(new File(fileName ))
+    pw.write(a.render(2))
+    pw.close()
+  }
+
+
 }
