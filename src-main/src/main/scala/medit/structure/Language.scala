@@ -8,36 +8,28 @@ import scala.collection.mutable
 
 
 
-case class Language(types: Seq[Type], root: TypeTag) {
-  /** MEDIT_EXTRA_START **/
+case class Language(
+    lexers: Seq[Lexer],
+    types: Seq[Type],
+    root: TypeTemplate
+) {
 
-  private[structure] val delimiters = mutable.Set[String]()
-  private[structure] val separators = mutable.Set[String]()
-  private[structure] val keywords = mutable.Set[String]()
+  private val delimiters = mutable.Set[String]()
+  private val keywords = mutable.Set[String]()
 
+  if (!lexers.map(_.name).unique) throw StructureException.DuplicateName()
   if (!types.map(_.name).unique) throw StructureException.DuplicateName()
-  types.foreach(_.check(types, this))
-  root.check(types)
 
-  println("delimiters: " + delimiters.mkString(" "))
-  println("separators: " + separators.mkString(" "))
-  println("keywords: " + keywords.mkString(" "))
+  def check(template: Template): Unit = {
 
-  /** MEDIT_EXTRA_END **/
+  }
+
+  types.foreach {
+    case Type.Record(_, template) => check(template)
+    case Type.Sum(_, cases) =>
+      cases.foreach(a => check(a.template))
+  }
 }
-
 object Language {
-  /** MEDIT_EXTRA_START **/
-  def parse(str: String): Language = {
-    pickle.read[Language](str)
-  }
-
-  def serialize(language: Language): String = {
-    pickle.write(language)
-  }
-
-  /** MEDIT_EXTRA_END **/
   implicit val rw: RW[Language] = macroRW
 }
-
-

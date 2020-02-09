@@ -81,7 +81,7 @@ object Node {
   val DefaultIndent: Float = TextStyle.delimiters.unit.width * 2
 
   def create(parent: Node, language: Language, a: TypeTag, data: ujson.Value): Node = {
-    def fromFields(s: Structure, fields: Seq[NameTypeTag], obj: mutable.Map[String, ujson.Value]): Unit = {
+    def fromFields(s: Structure, fields: Seq[Field], obj: mutable.Map[String, ujson.Value]): Unit = {
       s.init(fields.map(f => {
         if (obj.contains(f.name)) {
           create(s, language, f.tag, obj(f.name))
@@ -92,7 +92,7 @@ object Node {
     }
     a match {
       case TypeTag.Str => new Str(parent).init(data.str)
-      case coll: TypeTag.Coll =>
+      case coll: TypeTag.Col =>
         val col = new Collection(parent, language, coll)
         col.init(data.arr.toSeq.map(a => create(col, language, coll.item, a)))
         col
@@ -118,7 +118,7 @@ object Node {
 
   def default(parent: Node, language: Language, a: TypeTag): Node = a match {
     case TypeTag.Str => new Str(parent)
-    case coll: TypeTag.Coll => new Collection(parent, language, coll)
+    case coll: TypeTag.Col => new Collection(parent, language, coll)
     case n: TypeTag.Ref =>
       if (n.index == -1) {
         logicError()
@@ -269,12 +269,12 @@ object Node {
 
     val template: Template = typ match {
       case record: Type.Record =>
-        record.templateOrDefault
+        record.template
       case sum: Type.Sum =>
         if (index == -1) {
           logicError()
         }
-        sum.cases(index).templateOrDefault
+        sum.cases(index).template
     }
 
 
@@ -285,7 +285,7 @@ object Node {
 
   class Collection(
       override protected var _parent: Node,
-      val language: Language, val sort: TypeTag.Coll) extends HaveChilds {
+      val language: Language, val sort: TypeTag.Col) extends HaveChilds {
 
     var template: TypeTemplate.Col= null
 

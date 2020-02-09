@@ -11,6 +11,7 @@ import java.nio._
 import medit.draw.{Canvas, Position, Rect, ShapeStyle, TextMeasure, TextStyle, Typeface}
 import medit.editor.Editor
 import medit.structure.Language
+import medit.structure.samples.Json
 import org.lwjgl.glfw.Callbacks._
 import org.lwjgl.glfw.GLFW._
 import org.lwjgl.opengl.GL30._
@@ -198,7 +199,7 @@ class Window extends Canvas {
   init()
 
   editor = new Editor(
-    Language.parse(utils.read("language-meta.json")),
+    Json.language,
     ujson.read(utils.read("language-meta.json")),
     a => utils.save(a, "language-meta.json"))
 //  editor = new Editor(

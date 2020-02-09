@@ -21,7 +21,7 @@ object utils {
   }
 
   implicit class RichString(val str: String) extends AnyVal {
-    def isBlank: Boolean = {
+    def isBlank_ : Boolean = {
       val a = str.nonEmpty && !str.exists(a => Character.isSpaceChar(a))
       !a
     }

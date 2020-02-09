@@ -1,5 +1,7 @@
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
+
+
 name := "medit"
 
 version := "0.1"
@@ -15,6 +17,13 @@ lazy val `main` = crossProject(JSPlatform, JVMPlatform)
     "com.lihaoyi" %%% "upickle" % "0.9.8"
   )
 )
+
+lazy val `parser-parser-tree-sitter` = project.in(file("src-parser-tree-sitter")).settings(
+  sharedSettings,
+  libraryDependencies ++= Seq(
+    "com.github.JetBrains" % "jsitter" % "-SNAPSHOT"
+  )
+).dependsOn(`main`.jvm)
 
 lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
   sharedSettings,
@@ -36,12 +45,16 @@ lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
       "org.bytedeco" % "skia-platform" % "1.68.0-1.5.2"
     )
   },
-).dependsOn(`main`.jvm)
+).dependsOn(`main`.jvm, `parser-parser-tree-sitter`)
+    .enablePlugins(JavaAppPackaging)
+    .enablePlugins(GraalVMNativeImagePlugin)
+
 
 val sharedSettings = Seq(
   scalaVersion := "2.13.1",
   resolvers ++= Seq(
-//    "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+    "jitpack" at "https://jitpack.io"
+    //    "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
 //    Resolver.jcenterRepo,
 //    Resolver.sonatypeRepo("releases"),
   ),
