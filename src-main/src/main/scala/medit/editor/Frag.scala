@@ -1,7 +1,6 @@
 package medit.editor
 
 import medit.draw.{TextMeasure, TextStyle}
-import medit.structure.SeparatorOpts
 import medit.utils._
 
 
