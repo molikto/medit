@@ -200,8 +200,9 @@ class Window extends Canvas {
 
   editor = new Editor(
     Json.language,
-    ujson.read(utils.read("language-meta.json")),
-    a => utils.save(a, "language-meta.json"))
+//    ujson.read(utils.read("language-meta.json")),
+//    a => utils.save(a, "language-meta.json")
+  )
 //  editor = new Editor(
 //    Language.parse(utils.read("language-meta.json")),
 //    ujson.read(utils.read("language-mlang.json")),

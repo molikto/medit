@@ -1,20 +1,32 @@
 package medit.structure
 
+import medit.structure.Template.Simple
 import medit.utils._
 import medit.utils.pickle.{macroRW, ReadWriter => RW}
 
 sealed trait Template
+
+case class Breakable(b1: Simple, b2: Simple)
+
+object Breakable {
+  implicit val rw: RW[Breakable] = macroRW[Breakable]
+  val `{}` =  Breakable(Template.Delimiter.`{`, Template.Delimiter.`}`)
+  val `[]` =  Breakable(Template.Delimiter.`[`, Template.Delimiter.`]`)
+}
 
 object Template {
   sealed trait Terminal extends Template
 
   sealed trait Simple extends Terminal {
     def str: String
-    if (str.isBlank_) throw StructureException.BlankConstants()
+
+    if (str.isEmpty) throw StructureException.BlankConstants()
+    if (str.exists(a => Character.isSpaceChar(a))) throw StructureException.CannotContainSpace()
   }
 
   object Simple {
-    val rw: RW[Simple] = RW.merge(
+    implicit val rw: RW[Simple] = RW.merge(
+
       macroRW[Keyword],
       macroRW[Delimiter],
     )
@@ -26,10 +38,18 @@ object Template {
   @upickle.implicits.key("delimiter")
   case class Delimiter(str: String) extends Simple
 
-  @upickle.implicits.key("field")
-  case class Field(name: String, template: TypeTemplate) extends Terminal with Named {
-    var index = -1
+  object Delimiter {
+    val `:` = Delimiter(":")
+    val `,` = Delimiter(",")
+    val `"` = Delimiter("\"")
+    val `{` = Delimiter("{")
+    val `}` = Delimiter("}")
+    val `[` = Delimiter("[")
+    val `]` = Delimiter("]")
   }
+
+  @upickle.implicits.key("field")
+  case class Field(name: String, template: TypeTemplate) extends Terminal with Named
 
 
   @upickle.implicits.key("col")
@@ -39,10 +59,6 @@ object Template {
   case class Compose(content: Seq[Template]) extends Template {
     if (content.size < 2) throw StructureException.ComposeShouldHaveMoreThanOneChildren()
   }
-  object Compose {
-    def apply(seq: Template*) = new Compose(seq)
-  }
-
 
   implicit val rw: RW[Template] = RW.merge(
     Simple.rw,

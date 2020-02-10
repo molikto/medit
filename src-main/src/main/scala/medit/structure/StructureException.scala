@@ -13,6 +13,8 @@ object StructureException {
 
   case class BlankConstants() extends StructureException
 
+  case class CannotContainSpace() extends StructureException
+
   case class UnknownTextStyle() extends StructureException
 
   case class UnknownReference() extends StructureException

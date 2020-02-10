@@ -34,8 +34,7 @@ object Case {
 sealed trait Type extends Named
 object Type {
   @upickle.implicits.key("record")
-  case class Record(name: String, template: Template) extends Type with Fields {
-  }
+  case class Record(name: String, template: Template) extends Type with Fields
 
   @upickle.implicits.key("sum")
   case class Sum(name: String, cases: Seq[Case]) extends Type {

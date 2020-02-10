@@ -94,4 +94,9 @@ package object input {
 
   type Codepoint = Int
 
+  object Codepoint {
+    override def toString: String = ""
+    def toString(code: Codepoint): String = code.toChar.toString
+  }
+
 }
