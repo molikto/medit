@@ -14,7 +14,7 @@ lazy val `main` = crossProject(JSPlatform, JVMPlatform)
   )
 ).jvmSettings(
   libraryDependencies ++= Seq(
-    "com.lihaoyi" %%% "upickle" % "0.9.8"
+    "com.lihaoyi" %%% "upickle" % "0.9.9"
   )
 )
 
