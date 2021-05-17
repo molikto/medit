@@ -51,7 +51,7 @@ lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
 
 
 val sharedSettings = Seq(
-  scalaVersion := "2.13.1",
+  scalaVersion := "2.13.6",
   resolvers ++= Seq(
     "jitpack" at "https://jitpack.io"
     //    "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
