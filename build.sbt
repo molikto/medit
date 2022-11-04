@@ -42,7 +42,7 @@ lazy val `gui-jvm` = project.in(file("src-gui-jvm")).settings(
         )
       }
     } ++ Seq(
-      "org.bytedeco" % "skia-platform" % "1.68.1-1.5.3"
+      "org.bytedeco" % "skia-platform" % "2.88.3-1.5.8"
     )
   },
 ).dependsOn(`main`.jvm, `parser-parser-tree-sitter`)
