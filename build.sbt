@@ -6,9 +6,8 @@ name := "medit"
 
 version := "0.1"
 
-lazy val `main` = crossProject(JSPlatform, JVMPlatform)
-    .crossType(CrossType.Pure)
-    .in(file("src-main")).settings(
+lazy val `main` = (file("src-main") / crossProject(JSPlatform, JVMPlatform)
+    .crossType(CrossType.Pure)).settings(
   sharedSettings,
   libraryDependencies ++= Seq(
   )
@@ -58,8 +57,8 @@ val sharedSettings = Seq(
 //    Resolver.jcenterRepo,
 //    Resolver.sonatypeRepo("releases"),
   ),
-  sources in (Compile, doc) := Seq.empty,
-  publishArtifact in (Compile, packageDoc) := false,
+  (Compile / doc / sources) := Seq.empty,
+  (Compile / packageDoc / publishArtifact) := false,
   javacOptions ++= Seq(
     "-Xdiags:verbose"
   ),
@@ -70,8 +69,8 @@ val sharedSettings = Seq(
     "-unchecked", // Enable additional warnings where generated code depends on assumptions.
     //"-P:acyclic:force",
   ),
-  fork in run := true,
-  baseDirectory in run := file("."),
+  (run / fork) := true,
+  (run / baseDirectory) := file("."),
   //  autoCompilerPlugins := true,
   //  addCompilerPlugin("com.lihaoyi" %% "acyclic" %  "0.2.0"),
   //  libraryDependencies += "com.lihaoyi" %% "acyclic" % "0.2.0" % "provided",
